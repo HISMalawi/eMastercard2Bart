@@ -1,7 +1,7 @@
-# eMastercard2Bart
+# eMastercard2Nart
 
 Migrate an [eMastercard](https://github.com/HISMalawi/E-MasterCard-BackEnd) database
-to a [BART](https://github.com/HISMalawi/BHT-Core-Apps-ART) database.
+to a [NART](https://github.com/HISMalawi/BHT-Core-Apps-ART) database.
 
 ## Requirements
 
