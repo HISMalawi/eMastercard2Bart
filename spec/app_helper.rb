@@ -1,43 +1,22 @@
-require 'spec_helper'
-require 'byebug'
+# frozen_string_literal: true
 
+require 'byebug'
+require 'spec_helper'
+require 'sequel'
 
 module Faker
-  TABLE_STUBS = {
-    'person' => [{'gender' => 'M', 'birthdate' => '2000-01-01', 'birthdate_estimated' => 1}],
-    'person_name' => [{'given_name' => 'Foo', 'family_name' => 'bar', 'middle_name' => nil}],
-    'person_address' => [{'city_village' => 'House No. 56, Chatha Road, Chileka'}]
-  }.freeze
+  require_relative './emastercard_setup'
 
-  # Returns a fake object with a Mysql2::Client compatible interface
-  def self.fake_mysqlclient(table_stubs = {})
-    clazz = Class.new do
-      attr_reader :table_stubs
+  # Returns a Sequel client bound to a test database
+  def self.emastercard_database(seed_data = {})
+    sequel = Sequel.sqlite
+    EMastercard.create_database_schema(sequel)
+    EMastercard.seed_database(sequel, seed_data)
 
-      def initialize(table_stubs)
-        @table_stubs = table_stubs
-      end
-
-      def escape(value)
-        value
-      end
-
-      def query(query)
-        table = /SELECT .* FROM\s+(?<table>\w*)\s+WHERE/i.match(query)[:table]
-        table_stubs[table] 
-      end
-    end
-
-    clazz.new(TABLE_STUBS.merge(table_stubs))
+    sequel
   end
 
-  def self.fake_emastercard_patient
-    {
-      'patient_id' => 42,
-      'guardian_name' => 'Peter Quill',
-      'guardian_relation' => 'Parent',
-      'guardian_phone' => '0888800900',
-      'patient_phone' => '265888800900'
-    }      
+  def self.emastercard_seed_data
+    EMastercard::SEED_DATA
   end
 end
