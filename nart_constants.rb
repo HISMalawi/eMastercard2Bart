@@ -1,0 +1,35 @@
+# frozen_string_literal: true
+
+module Nart
+  module Concepts
+    AGREES_TO_FOLLOW_UP = 2552
+    COTRIMOXAZOLE = 916
+    DOLUTEGRAVIR = 9662
+    EVER_RECEIVED_ART = 7754
+    EVER_REGISTERED_AT_ART_CLINIC = 7937
+    GUARDIAN_PRESENT = 2122
+    HEIGHT = 5090
+    NEW_PATIENT = 7572
+    NO = 1066
+    PATIENT_PRESENT = 1805
+    TYPE_OF_PATIENT = 3289
+    WEIGHT = 5089
+    YES = 1065
+  end
+
+  module Orders
+    DRUG_ORDER = 1
+  end
+
+  module Encounters
+    APPOINTMENT = 7
+    DISPENSING = 54
+    HIV_CLINIC_REGISTRATION = 9
+    HIV_CLINIC_CONSULTATION = 53
+    HIV_RECEPTION = 51
+    HIV_STAGING = 52
+    REGISTRATION = 5
+    TREATMENT = 25
+    VITALS = 6
+  end
+end
