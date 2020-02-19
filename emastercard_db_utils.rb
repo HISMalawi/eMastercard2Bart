@@ -8,7 +8,7 @@ require 'yaml'
 module EmastercardDbUtils
   def find_observation(person_id, concept_id)
     sequel[:obs].join(:encounter, encounter_id: :encounter_id)
-                .first(encounter_type: EMastercardEncounters::ART_VISIT,
+                .first(encounter_type: Emastercard::Encounters::ART_VISIT,
                        concept_id: concept_id,
                        person_id: person_id)
   end
@@ -19,13 +19,15 @@ module EmastercardDbUtils
 
   def find_all_observations(person_id, concept_id)
     sequel[:obs].join(:encounter, encounter_id: :encounter_id)
-                .where(encounter_type: EMastercardEncounters::ART_VISIT,
+                .where(encounter_type: Emastercard::Encounters::ART_VISIT,
                        concept_id: concept_id,
                        person_id: person_id)
   end
 
   def find_all_observations_by_date(person_id, concept_id, date)
-    day_start, day_end = day_bounds(date)
+    day_start = date.strftime('%Y-%m-%d 00:00:00')
+    day_end = date.strftime('%Y-%m-%d 23:59:59')
+
     find_all_observations(person_id, concept_id).where(obs_datetime: day_start..day_end)
   end
 

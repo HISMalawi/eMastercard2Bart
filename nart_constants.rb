@@ -9,6 +9,7 @@ module Nart
     EVER_REGISTERED_AT_ART_CLINIC = 7937
     GUARDIAN_PRESENT = 2122
     HEIGHT = 5090
+    NEXT_APPOINTMENT_DATE = 5096
     NEW_PATIENT = 7572
     NO = 1066
     PATIENT_PRESENT = 1805
@@ -31,5 +32,10 @@ module Nart
     REGISTRATION = 5
     TREATMENT = 25
     VITALS = 6
+  end
+
+  module PersonAttributeTypes
+    LANDMARK = 19
+    PHONE_NUMBER = 12
   end
 end

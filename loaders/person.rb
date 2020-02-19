@@ -16,7 +16,6 @@ module Loaders
 
         {
           names: read_person_names(patient),
-          addresses: read_person_addresses(patient),
           attributes: read_person_attributes(patient),
           relationships: read_person_relationships(patient),
           gender: person[:gender],
@@ -34,20 +33,30 @@ module Loaders
                             .to_a
       end
 
-      def read_person_addresses(patient)
-        LOGGER.debug("Reading eMastercard person addresses for patient ##{patient[:patient_id]}")
-        addresses = sequel[:person_address].where(person_id: patient[:patient_id])
-                                           .select(:city_village)
-
-        addresses.map do |address|
-          # eMastercard only saves a location that's sort of a landmark
-          { landmark: address[:city_village] }
-        end
-      end
-
       def read_person_attributes(patient)
         LOGGER.debug("Reading eMastercard person attributes for patient ##{patient[:patient_id]}")
-        [{ person_attribute_type: 'Phone number', value: patient[:patient_phone] }]
+        attributes = []
+
+        unless patient[:patient_phone]&.strip&.empty?
+          attributes << {
+            person_attribute_type_id: Nart::PersonAttributeTypes::PHONE_NUMBER,
+            value: patient[:patient_phone]
+          }
+        end
+
+        addresses = sequel[:person_address].where(person_id: patient[:patient_id])
+                                           .select(:city_village)
+        addresses.each do |address|
+          landmark = address[:city_village]&.strip
+          next if landmark.nil? || landmark.empty?
+
+          attributes.append(
+            person_attribute_type_id: Nart::PersonAttributeTypes::LANDMARK,
+            value: landmark
+          )
+        end
+
+        attributes
       end
 
       def read_person_relationships(patient)

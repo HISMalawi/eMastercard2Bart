@@ -7,6 +7,8 @@ module Emastercard
     EVER_TAKEN_ARVS = 12
     HEIGHT1 = 6 # eMastercard has 2 separate concepts for Height
     HEIGHT2 = 51
+    INITIAL_TB_STATUS = 9
+    KS = 10
     NEXT_APPOINTMENT_DATE = 47
   end
 
