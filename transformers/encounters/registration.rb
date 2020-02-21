@@ -1,12 +1,12 @@
 # frozen_string_literal.rb
 
-module Loaders
+module Transformers
   module Encounters
     module Registration
       class << self
         include EmastercardDbUtils
 
-        def load(_patient, visit)
+        def transform(_patient, visit)
           {
             encounter_type_id: Nart::Encounters::REGISTRATION,
             encounter_datetime: visit[:encounter_datetime],

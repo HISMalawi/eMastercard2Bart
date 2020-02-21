@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-module Loaders
+module Transformers
   module Encounters
     module Vitals
       class << self
-        def load(_patient, visit)
+        def transform(_patient, visit)
           observations = [{
             concept_id: Nart::Concepts::WEIGHT,
             obs_datetime: visit[:encounter_datetime],

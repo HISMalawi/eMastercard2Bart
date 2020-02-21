@@ -3,12 +3,12 @@
 require_relative '../logging'
 require_relative '../emastercard_db_utils'
 
-module Loaders
+module Transformers
   module Person
     class << self
       include EmastercardDbUtils
 
-      def load(patient)
+      def transform(patient)
         LOGGER.debug("Constructing person for eMastercard patient ##{patient[:patient_id]}.")
 
         person = sequel[:person].select(:gender, :birthdate, :birthdate_estimated)

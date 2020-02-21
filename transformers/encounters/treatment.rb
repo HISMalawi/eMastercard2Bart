@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 require 'set'
 
-module Loaders
+module Transformers
   module Encounters
     module Treatment
       class << self
         include NartDbUtils
 
-        def load(_patient, visit)
+        def transform(_patient, visit)
           visit_date = visit[:encounter_datetime]
           drugs = guess_prescribed_arvs(visit[:art_regimen], visit[:weight], visit_date)
 

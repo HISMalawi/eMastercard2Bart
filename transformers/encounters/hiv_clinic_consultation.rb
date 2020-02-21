@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-module Loaders
+module Transformers
   module Encounters
     module HivClinicConsultation
       class << self
-        def load(patient, visit)
+        def transform(patient, visit)
           observations = [side_effects(patient, visit), on_tb_treatment(patient, visit)]
 
           {

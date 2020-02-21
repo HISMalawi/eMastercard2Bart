@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-module Loaders
+module Transformers
   module Encounters
     module HivReception
       class << self
-        def load(_patient, visit)
+        def transform(_patient, visit)
           {
             encounter_type_id: Nart::Encounters::HIV_RECEPTION,
             encounter_datetime: visit[:encounter_datetime],

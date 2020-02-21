@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-module Loaders
+module Transformers
   module Encounters
     module Appointment
       class << self
         include EmastercardDbUtils
 
-        def load(patient, visit)
+        def transform(patient, visit)
           observations = [appointment_date(patient, visit)]
 
           {

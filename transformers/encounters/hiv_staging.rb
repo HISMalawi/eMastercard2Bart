@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-module Loaders
+module Transformers
   module Encounters
     module HivStaging
       class << self
         include EmastercardDbUtils
 
-        def load(patient, visit)
+        def transform(patient, visit)
           observations = [
             tb_status_at_initiation(patient, visit),
             kaposis_sarcoma(patient, visit),
