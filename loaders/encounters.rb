@@ -43,7 +43,7 @@ module Loaders
         encounters << Encounters::HivClinicConsultation.load(patient, visit)
         # encounters << hiv_clinic_consultation_clinician(patient, visit_date)
         encounters << Encounters::Treatment.load(patient, visit)
-        encounters << Encounters::Dispensing.load(patient, visit)
+        encounters << Encounters::Dispensing.load(patient, visit, encounters.last)
         encounters << Encounters::Appointment.load(patient, visit)
 
         encounters + load(patient, visits[1..visits.size], false)

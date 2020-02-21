@@ -12,11 +12,8 @@ module Loaders
           drugs = guess_prescribed_arvs(visit[:art_regimen], visit[:weight], visit_date)
 
           if visit[:cpt_ipt_given_options]&.casecmp?('Yes')
-            drugs ||= []
             drugs << guess_prescribed_cpt(visit[:weight])
           end
-
-          return {} if drugs.nil? || drugs.empty?
 
           {
             encounter_type_id: Nart::Encounters::TREATMENT,
@@ -77,14 +74,14 @@ module Loaders
 
         def guess_prescribed_arvs(regimen_name, patient_weight, _date)
           LOGGER.debug("Guestimating ARV prescription for #{patient_weight}Kg patient under regimen #{regimen_name}")
-          return nil unless regimen_name
+          return [] unless regimen_name
 
           regimen_index, _regimen_category = split_regimen_name(regimen_name)
-          return nil unless regimen_index
+          return [] unless regimen_index
 
           if patient_weight.nil?
             LOGGER.warn("Patient weight not available, choosing first combination of #{regimen_index}")
-            return REGIMEN_COMBINATIONS[regimen_name]&.first
+            return REGIMEN_COMBINATIONS[regimen_name]&.first || []
           end
 
           regimen_id = sequel[:moh_regimens].where(regimen_index: regimen_index)
@@ -93,14 +90,14 @@ module Loaders
                                                  .where { min_weight <= patient_weight && min_weight >= patient_weight }
                                                  .map(:drug_inventory_id)
 
-          return nil if drugs.empty?
+          return [] if drugs.empty?
 
           drug_combinations = form_regimen_combinations(regimen_index, drugs)
           if drug_combinations.size > 1
             LOGGER.warn("Weight, #{patient_weight}Kg, has multiple possible drugs on regimen #{regimen_name}: #{drug_combinations}")
           end
 
-          drug_combinations.first
+          drug_combinations.first || []
         end
 
         def guess_prescribed_cpt(patient_weight)
