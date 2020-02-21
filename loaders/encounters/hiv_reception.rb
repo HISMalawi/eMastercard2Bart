@@ -6,7 +6,7 @@ module Loaders
       class << self
         def load(_patient, visit)
           {
-            encounter_type: Nart::Encounters::HIV_RECEPTION,
+            encounter_type_id: Nart::Encounters::HIV_RECEPTION,
             encounter_datetime: visit[:encounter_datetime],
             observations: [
               {

@@ -7,16 +7,20 @@ module Loaders
         include EmastercardDbUtils
 
         def load(patient, visit)
+          observations = [
+            tb_status_at_initiation(patient, visit),
+            kaposis_sarcoma(patient, visit),
+            pregnant_or_breastfeeding(patient, visit)
+          ]
+
           {
             encounter_type_id: Nart::Encounters::HIV_STAGING,
             encounter_datetime: visit[:encounter_datetime],
-            observations: [
-              tb_status_at_initiation(patient, visit),
-              kaposis_sarcoma(patient, visit),
-              pregnant_or_breastfeeding(patient, visit)
-            ]
+            observations: observations.select
           }
         end
+
+        private
 
         def tb_status_at_initiation(patient, visit)
           case find_observation(patient[:patient_id], Emastercard::Concepts::INITIAL_TB_STATUS)&.value_text
