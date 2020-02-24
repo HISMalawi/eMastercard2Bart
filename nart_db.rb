@@ -2,12 +2,11 @@
 
 module NartDb
   def self.from_table
-    return @sequel if @sequel
+    LOGGER.debug('Retrieving NART database instance')
+    return @from_table if @from_table
 
-    config = File.open("#{__dir__}/config.yaml") do |config_file|
-      YAML.safe_load(config_file)['emr']
-    end
-
+    LOGGER.debug('Loading NART database configuration')
+    config = CONFIG['emr']
     engine = config['engine'] || 'mysql2'
     username = config['username']
     password = config['password']
@@ -15,8 +14,9 @@ module NartDb
     port = config['port'] || 3306
     database = config['database']
 
-    @sequel = Sequel.connect("#{engine}://#{username}:#{password}@#{host}:#{port}/#{database}")
-    @sequel.loggers << Logger.new(STDOUT)
-    @sequel
+    LOGGER.debug('Connecting to NART database')
+    @from_table = Sequel.connect("#{engine}://#{username}:#{password}@#{host}:#{port}/#{database}")
+    @from_table.loggers << Logger.new(STDOUT)
+    @from_table
   end
 end

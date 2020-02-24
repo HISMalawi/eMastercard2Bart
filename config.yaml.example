@@ -1,3 +1,6 @@
+# Site prefix to be used in ARV numbers (eg LLH)
+site_prefix:
+
 emastercard:
   engine: mysql2
   host: localhost

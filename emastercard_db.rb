@@ -47,12 +47,11 @@ module EmastercardDb
     end
 
     def from_table
+      LOGGER.debug('Retrieving eMastercard database instance...')
       return @from_table if @from_table
 
-      config = File.open("#{__dir__}/config.yaml") do |config_file|
-        YAML.safe_load(config_file)['emastercard']
-      end
-
+      LOGGER.debug('Loading eMastercard database configuration...')
+      config = CONFIG['emastercard']
       engine = config['engine'] || 'mysql2'
       username = config['username']
       password = config['password']
@@ -60,6 +59,7 @@ module EmastercardDb
       port = config['port'] || 3306
       database = config['database']
 
+      LOGGER.debug('Connecting to eMastercard database...')
       @from_table = Sequel.connect("#{engine}://#{username}:#{password}@#{host}:#{port}/#{database}")
       @from_table.loggers << Logger.new(STDOUT)
       @from_table

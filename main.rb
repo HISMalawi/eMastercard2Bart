@@ -11,6 +11,14 @@ require_relative 'nart_db'
 
 require_relative 'transformers/patient'
 
+CONFIG = File.open("#{__dir__}/config.yaml") do |config_file|
+  YAML.safe_load(config_file)
+end
+
+if CONFIG['site_prefix'].nil? || CONFIG['site_prefix'].empty?
+  raise 'site_prefix not set in `config.yml`'
+end
+
 EmastercardReader.read_patients.each do |patient|
   print(JSON.dump(Transformers::Patient.transform(patient)))
 end
