@@ -18,4 +18,8 @@ module Emastercard
     ART_REGISTRATION = 1
     ART_VISIT = 4
   end
+
+  module PatientIdentifierTypes
+    ARV_NUMBER = 4
+  end
 end

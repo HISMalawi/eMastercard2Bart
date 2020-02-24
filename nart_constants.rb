@@ -45,6 +45,10 @@ module Nart
     VITALS = 6
   end
 
+  module PatientIdentifierTypes
+    ARV_NUMBER = 4
+  end
+
   module PersonAttributeTypes
     LANDMARK = 19
     PHONE_NUMBER = 12

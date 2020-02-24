@@ -4,9 +4,7 @@
 # associated encounters, observations, and other metadata like
 # patient_identifiers.
 
-require 'mysql2'
-
-require_relative '../logging'
+require_relative 'patient_identifiers'
 require_relative 'person'
 require_relative 'encounters'
 
@@ -22,7 +20,7 @@ module Transformers
         encounters: Encounters.transform(emastercard_patient, visits),
         # states: read_patient_states(sequel, result),
         # programs: read_patient_programs(sequel, result),
-        # identifiers: read_patient_identifiers(sequel, result)
+        identifiers: PatientIdentifiers.transform(emastercard_patient)
       }
     end
   end
