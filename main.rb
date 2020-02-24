@@ -3,11 +3,11 @@ require 'byebug'
 require 'json'
 
 require_relative 'emastercard_constants'
-require_relative 'emastercard_db_utils'
+require_relative 'emastercard_db'
 require_relative 'emastercard_reader'
 require_relative 'logging'
 require_relative 'nart_constants'
-require_relative 'nart_db_utils'
+require_relative 'nart_db'
 
 require_relative 'transformers/patient'
 

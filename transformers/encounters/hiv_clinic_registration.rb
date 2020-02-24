@@ -4,7 +4,7 @@ module Transformers
   module Encounters
     module HivClinicRegistration
       class << self
-        include EmastercardDbUtils
+        include EmastercardDb
 
         def transform(patient, visit)
           observations = [
@@ -24,10 +24,11 @@ module Transformers
         private
 
         def ever_registered_at_art_clinic(patient, visit)
-          registration_type = find_observation_by_encounter(patient[:patient_id],
-                                                            Emastercard::Concepts::CLINICAL_REGISTRATION_TYPE,
-                                                            Emastercard::Encounters::ART_REGISTRATION)
-                                &.[](:value_text)
+          registration_type = EmastercardDb.find_observation_by_encounter(
+            patient[:patient_id],
+            Emastercard::Concepts::CLINICAL_REGISTRATION_TYPE,
+            Emastercard::Encounters::ART_REGISTRATION
+          )&.[](:value_text)
 
           return nil unless registration_type
 
@@ -43,9 +44,10 @@ module Transformers
         end
 
         def ever_received_art(patient, visit)
-          ever_received_arts = find_observation(patient[:patient_id],
-                                                Emastercard::Concepts::EVER_TAKEN_ARVS)
-                                &.[](:value_text)
+          ever_received_arts = EmastercardDb.find_observation(
+            patient[:patient_id],
+            Emastercard::Concepts::EVER_TAKEN_ARVS
+          )&.[](:value_text)
 
           return nil unless ever_received_arts
 
@@ -60,10 +62,11 @@ module Transformers
         end
 
         def date_antiretrovirals_started(patient, visit)
-          art_start_date = find_observation_by_encounter(patient[:patient_id],
-                                                         Emastercard::Concepts::CLINICAL_REGISTRATION_ART_START_DATE,
-                                                         Emastercard::Encounters::ART_REGISTRATION)
-                            &.[](value_datetime)
+          art_start_date = EmastercardDb.find_observation_by_encounter(
+            patient[:patient_id],
+            Emastercard::Concepts::CLINICAL_REGISTRATION_ART_START_DATE,
+            Emastercard::Encounters::ART_REGISTRATION
+          )&.[](:value_datetime)
 
           return nil unless art_start_date
 

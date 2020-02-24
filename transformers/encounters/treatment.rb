@@ -5,8 +5,6 @@ module Transformers
   module Encounters
     module Treatment
       class << self
-        include NartDbUtils
-
         def transform(_patient, visit)
           visit_date = visit[:encounter_datetime]
           drugs = guess_prescribed_arvs(visit[:art_regimen], visit[:weight], visit_date)
@@ -72,7 +70,7 @@ module Transformers
           17 => [Set.new([30, 1044]), Set.new([11, 969])]
         }.freeze
 
-        def guess_prescribed_arvs(regimen_name, patient_weight, _date)
+        def guess_prescribed_arvs(regimen_name, patient_weight, _date = nil)
           LOGGER.debug("Guestimating ARV prescription for #{patient_weight}Kg patient under regimen #{regimen_name}")
           return [] unless regimen_name
 
@@ -84,11 +82,14 @@ module Transformers
             return REGIMEN_COMBINATIONS[regimen_name]&.first || []
           end
 
-          regimen_id = sequel[:moh_regimens].where(regimen_index: regimen_index)
-                                            .get(:regimen_id)
-          drugs = sequel[:moh_regimen_ingredient].where(regimen_id: regimen_id)
-                                                 .where { min_weight <= patient_weight && min_weight >= patient_weight }
-                                                 .map(:drug_inventory_id)
+          regimen_id = NartDb.from_table[:moh_regimens]
+                             .where(regimen_index: regimen_index)
+                             .get(:regimen_id)
+
+          drugs = NartDb.from_table[:moh_regimen_ingredient]
+                        .where(regimen_id: regimen_id)
+                        .where { min_weight <= patient_weight && min_weight >= patient_weight }
+                        .map(:drug_inventory_id)
 
           return [] if drugs.empty?
 
@@ -105,16 +106,19 @@ module Transformers
           return cpt_drug_ids.first if patient_weight.nil?
 
           # Make sure we get only the cpt for patients with the given weight
-          sequel[:moh_regimen_ingredient].where(drug_inventory_id: cpt_drug_ids)
-                                         .where { min_weight <= patient_weight && max_weight >= patient_weight }
-                                         .get(:drug_inventory_id)
+          NartDb.from_table[:moh_regimen_ingredient]
+                .where(drug_inventory_id: cpt_drug_ids)
+                .where { min_weight <= patient_weight && max_weight >= patient_weight }
+                .get(:drug_inventory_id)
         end
 
         def drug_concept_id(drug_id)
           @drug_concept_ids ||= {}
           return @drug_concept_ids[drug_id] if @drug_concept_ids.include?(drug_id)
 
-          @drug_concept_ids[drug_id] = sequel[:drug].where(drug_id: drug_id).get(:concept_id)
+          @drug_concept_ids[drug_id] = NartDb.from_table[:drug]
+                                             .where(drug_id: drug_id)
+                                             .get(:concept_id)
         end
 
         def split_regimen_name(regimen_name)
@@ -147,8 +151,9 @@ module Transformers
         end
 
         def cpt_drug_ids
-          @cpt_drug_ids ||= sequel[:drug].where(concept_id: cpt_concept_id, retired: 0)
-                                         .map(:drug_id)
+          @cpt_drug_ids ||= NartDb.from_table[:drug]
+                                  .where(concept_id: cpt_concept_id, retired: 0)
+                                  .map(:drug_id)
         end
 
         def cpt_concept_id

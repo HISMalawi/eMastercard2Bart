@@ -1,18 +1,13 @@
 # frozen_string_literal: true
 
-require_relative '../logging'
-require_relative '../emastercard_db_utils'
-
 module Transformers
   module Person
     class << self
-      include EmastercardDbUtils
-
       def transform(patient)
         LOGGER.debug("Constructing person for eMastercard patient ##{patient[:patient_id]}.")
 
-        person = sequel[:person].select(:gender, :birthdate, :birthdate_estimated)
-                                .first(person_id: patient[:patient_id])
+        person = EmastercardDb.from_table[:person].select(:gender, :birthdate, :birthdate_estimated)
+                                              .first(person_id: patient[:patient_id])
 
         {
           names: read_person_names(patient),
@@ -28,9 +23,9 @@ module Transformers
 
       def read_person_names(patient)
         LOGGER.debug("Reading eMastercard person names for patient ##{patient[:patient_id]}")
-        sequel[:person_name].select(:given_name, :family_name, :middle_name)
-                            .where(person_id: patient[:patient_id])
-                            .to_a
+        EmastercardDb.from_table[:person_name].select(:given_name, :family_name, :middle_name)
+                                          .where(person_id: patient[:patient_id])
+                                          .to_a
       end
 
       def read_person_attributes(patient)
@@ -44,8 +39,10 @@ module Transformers
           }
         end
 
-        addresses = sequel[:person_address].where(person_id: patient[:patient_id])
-                                           .select(:city_village)
+        addresses = EmastercardDb.from_table[:person_address]
+                                 .where(person_id: patient[:patient_id])
+                                 .select(:city_village)
+
         addresses.each do |address|
           landmark = address[:city_village]&.strip
           next if landmark.nil? || landmark.empty?

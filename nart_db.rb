@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-module NartDbUtils
-  def sequel
+module NartDb
+  def self.from_table
     return @sequel if @sequel
 
     config = File.open("#{__dir__}/config.yaml") do |config_file|

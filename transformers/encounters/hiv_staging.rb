@@ -4,7 +4,7 @@ module Transformers
   module Encounters
     module HivStaging
       class << self
-        include EmastercardDbUtils
+        include EmastercardDb
 
         def transform(patient, visit)
           observations = [
@@ -23,7 +23,8 @@ module Transformers
         private
 
         def tb_status_at_initiation(patient, visit)
-          case find_observation(patient[:patient_id], Emastercard::Concepts::INITIAL_TB_STATUS)&.value_text
+          case EmastercardDb.find_observation(patient[:patient_id], Emastercard::Concepts::INITIAL_TB_STATUS)
+                            &.value_text
           when /Last 2years/i
             {
               concept_id: Nart::Concepts::PTB_WITHIN_LAST_2_YEARS,
@@ -40,7 +41,8 @@ module Transformers
         end
 
         def kaposis_sarcoma(patient, visit)
-          case find_observation(patient[:patient_id], Emastercard::Concepts::KS)&.value_text
+          case EmastercardDb.find_observation(patient[:patient_id], Emastercard::Concepts::KS)
+                            &.value_text
           when /y/i
             {
               concept_id: Nart::Concepts::KAPOSIS_SARCOMA,

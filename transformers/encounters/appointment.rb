@@ -4,8 +4,6 @@ module Transformers
   module Encounters
     module Appointment
       class << self
-        include EmastercardDbUtils
-
         def transform(patient, visit)
           observations = [appointment_date(patient, visit)]
 
@@ -17,10 +15,11 @@ module Transformers
         end
 
         def appointment_date(patient, visit)
-          find_observation_by_date(patient[:patient_id],
-                                   Emastercard::Concepts::NEXT_APPOINTMENT_DATE,
-                                   visit[:encounter_datetime])
-            &.[](:value_datetime)
+          EmastercardDb.find_observation_by_date(
+            patient[:patient_id],
+            Emastercard::Concepts::NEXT_APPOINTMENT_DATE,
+            visit[:encounter_datetime]
+          )&.[](:value_datetime)
         end
       end
     end
