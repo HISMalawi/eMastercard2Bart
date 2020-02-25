@@ -17,13 +17,16 @@ module Transformers
             encounter_type_id: Nart::Encounters::TREATMENT,
             encounter_datetime: visit[:encounter_datetime],
             orders: drugs.map do |drug_id|
+              dose = ArtAdherence.find_arv_dose(drug_id, visit[:weight])
+
               {
                 order_type_id: Nart::Orders::DRUG_ORDER,
                 concept_id: drug_concept_id(drug_id),
                 start_date: visit_date,
                 auto_expire_date: nil, # Can this be safely estimated from  pills given?
                 drug_order: {
-                  drug_inventory_id: drug_id
+                  drug_inventory_id: drug_id,
+                  equivalent_daily_dose: dose && (dose[:am] || 0 + dose[:pm] || 0)
                 }
               }
             end

@@ -73,9 +73,9 @@ module Transformers
 
         def find_arv_dose(drug_id, weight)
           LOGGER.debug("Retrieving drug ##{drug_id} dose for #{weight}Kg patients")
-          NartDb.from_table[:moh_regimen_dose]
+          NartDb.from_table[:moh_regimen_doses]
                 .join(:moh_regimen_ingredient, dose_id: :dose_id)
-                .where(Sequel[:moh_regimen_ingredient][:drug_id] => drug_id)
+                .where(Sequel[:moh_regimen_ingredient][:drug_inventory_id] => drug_id)
                 .where do
                   (Sequel[:moh_regimen_ingredient][:min_weight] <= weight)\
                   & (Sequel[:moh_regimen_ingredient][:max_weight] >= weight)

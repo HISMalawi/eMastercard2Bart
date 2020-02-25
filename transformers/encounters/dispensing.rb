@@ -6,18 +6,28 @@ module Transformers
       class << self
         def transform(patient, visit, treatment_encounter)
           observations = treatment_encounter[:orders].map do |order|
+            amount_dispensed = find_drug_amount_dispensed(order[:drug_order][:drug_inventory_id], visit)
+            next nil unless amount_dispensed
+
+            if order[:drug_order][:equivalent_daily_dose]&.positive?
+              daily_dose = amount_dispensed / order[:drug_order][:equivalent_daily_dose]
+              order[:auto_expire_date] = order[:start_date] + daily_dose
+            end
+
+            order[:drug_order][:quantity] = amount_dispensed
+
             {
               concept_id: Nart::Concepts::AMOUNT_DISPENSED,
               obs_datetime: visit[:encounter_datetime],
               value_drug: order[:drug_order][:drug_inventory_id],
-              value_numeric: find_drug_amount_dispensed(order[:drug_order][:drug_inventory_id], visit)
+              value_numeric: amount_dispensed
             }
           end
 
           {
             encounter_type_id: Nart::Encounters::DISPENSING,
             encounter_datetime: visit[:encounter_datetime],
-            observations: observations.reject { |observation| observation[:value_numeric].nil? }
+            observations: observations.reject(&:nil?)
           }
         end
 
