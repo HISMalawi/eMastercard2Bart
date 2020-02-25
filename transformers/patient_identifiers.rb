@@ -21,7 +21,7 @@ module Transformers
                                        voided: 0)
       return nil unless identifier
 
-      "ARV-#{CONFIG['site_prefix']}-#{identifier[:identifier]}"
+      "#{CONFIG['site_prefix']}-ARV-#{identifier[:identifier]}"
     end
   end
 end
