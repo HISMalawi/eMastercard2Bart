@@ -1,5 +1,9 @@
 # Site prefix to be used in ARV numbers (eg LLH)
 site_prefix:
+# User to create records as:
+emr_user_id: 1
+# Current facility location id (defaults is ART Clinic - 764)
+emr_location_id: 764
 
 emastercard:
   engine: mysql2

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 require 'byebug'
+require 'date'
 require 'json'
+require 'securerandom'
 
 require_relative 'emastercard_constants'
 require_relative 'emastercard_db'
@@ -16,9 +18,15 @@ CONFIG = File.open("#{__dir__}/config.yaml") do |config_file|
   YAML.safe_load(config_file)
 end
 
-if CONFIG['site_prefix'].nil? || CONFIG['site_prefix'].empty?
-  raise 'site_prefix not set in `config.yml`'
+def check_config_option(option)
+  return CONFIG[option] if CONFIG[option]
+
+  raise "`#{option}` not set in 'config.yml'"
 end
+
+SITE_PREFIX = check_config_option('site_prefix')
+EMR_USER_ID = check_config_option('emr_user_id')
+EMR_LOCATION_ID = check_config_option('emr_location_id')
 
 EmastercardReader.read_patients.each do |patient|
   nart_patient = Transformers::Patient.transform(patient)
