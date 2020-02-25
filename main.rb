@@ -9,6 +9,7 @@ require_relative 'logging'
 require_relative 'nart_constants'
 require_relative 'nart_db'
 
+require_relative 'loaders/patient'
 require_relative 'transformers/patient'
 
 CONFIG = File.open("#{__dir__}/config.yaml") do |config_file|
@@ -20,5 +21,6 @@ if CONFIG['site_prefix'].nil? || CONFIG['site_prefix'].empty?
 end
 
 EmastercardReader.read_patients.each do |patient|
-  print(JSON.dump(Transformers::Patient.transform(patient)))
+  nart_patient = Transformers::Patient.transform(patient)
+  Loaders::Patient.load(nart_patient)
 end
