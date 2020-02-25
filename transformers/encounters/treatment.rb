@@ -88,7 +88,7 @@ module Transformers
 
           drugs = NartDb.from_table[:moh_regimen_ingredient]
                         .where(regimen_id: regimen_id)
-                        .where { min_weight <= patient_weight && min_weight >= patient_weight }
+                        .where { (min_weight <= patient_weight) & (max_weight >= patient_weight) }
                         .map(:drug_inventory_id)
 
           return [] if drugs.empty?
