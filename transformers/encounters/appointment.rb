@@ -8,18 +8,26 @@ module Transformers
           observations = [appointment_date(patient, visit)]
 
           {
-            encounter_type: Nart::Encounters::APPOINTMENT,
+            encounter_type_id: Nart::Encounters::APPOINTMENT,
             encounter_datetime: visit[:encounter_datetime],
-            observations: observations.select
+            observations: observations.reject(&:nil?)
           }
         end
 
         def appointment_date(patient, visit)
-          EmastercardDb.find_observation_by_date(
+          observation = EmastercardDb.find_observation_by_date(
             patient[:patient_id],
             Emastercard::Concepts::NEXT_APPOINTMENT_DATE,
             visit[:encounter_datetime]
-          )&.[](:value_datetime)
+          )
+
+          return nil unless observation
+
+          {
+            concept_id: Nart::Concepts::NEXT_APPOINTMENT_DATE,
+            obs_datetime: visit[:encounter_datetime],
+            value_datetime: observation[:value_datetime],
+          }
         end
       end
     end

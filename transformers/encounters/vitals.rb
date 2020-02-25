@@ -20,7 +20,7 @@ module Transformers
           end
 
           {
-            encounter_type: Nart::Encounters::VITALS,
+            encounter_type_id: Nart::Encounters::VITALS,
             encounter_datetime: visit[:encounter_datetime],
             observations: observations
           }

@@ -17,7 +17,7 @@ module Transformers
           {
             encounter_type_id: Nart::Encounters::HIV_CLINIC_REGISTRATION,
             encounter_datetime: visit[:encounter_datetime],
-            observations: observations.select
+            observations: observations.reject(&:nil?)
           }
         end
 

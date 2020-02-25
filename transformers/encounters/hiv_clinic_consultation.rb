@@ -10,7 +10,7 @@ module Transformers
           {
             encounter_type_id: Nart::Encounters::HIV_CLINIC_CONSULTATION,
             encounter_datetime: visit[:encounter_datetime],
-            observations: observations.select
+            observations: observations.reject(&:nil?)
           }
         end
 
@@ -29,7 +29,7 @@ module Transformers
                              when 'Y' then Nart::Concepts::YES
                              when 'N' then Nart::Concepts::NO
                              end,
-                value_text: 'Migrated from eMastercard 1.0'
+                comments: 'Migrated from eMastercard 1.0'
               }
             ]
           }
