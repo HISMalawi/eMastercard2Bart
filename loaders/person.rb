@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'date'
-require 'securerandom'
-
 module Loaders
   module Person
     def self.load(person)
@@ -70,7 +67,7 @@ module Loaders
                       person_b: other_person_id,
                       relationship: relationship[:relationship_type_id],
                       creator: 1,
-                      date_created: DateTime.now(),
+                      date_created: DateTime.now,
                       uuid: SecureRandom.uuid)
       end
     end
