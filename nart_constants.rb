@@ -8,6 +8,7 @@ module Nart
     COTRIMOXAZOLE = 916
     DATE_ANTIRETROVIRALS_STARTED = 2516
     DOLUTEGRAVIR = 9662
+    DRUG_ORDER_ADHERENCE = 6987
     EVER_RECEIVED_ART = 7754
     EVER_REGISTERED_AT_ART_CLINIC = 7937
     GUARDIAN_PRESENT = 2122
@@ -52,6 +53,10 @@ module Nart
   module PersonAttributeTypes
     LANDMARK = 19
     PHONE_NUMBER = 12
+  end
+
+  module Programs
+    HIV_PROGRAM = 1
   end
 
   module RelationshipTypes

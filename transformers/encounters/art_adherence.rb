@@ -8,7 +8,7 @@ module Transformers
           {
             encounter_type_id: Nart::Encounters::ART_ADHERENCE,
             encounter_datetime: current_visit[:encounter_datetime],
-            observations: [art_adherence(patient, previous_visit, current_visit)].select
+            observations: [art_adherence(patient, previous_visit, current_visit)].reject(&:nil?)
           }
         end
 
@@ -21,7 +21,13 @@ module Transformers
           expected_arvs = expected_remaining_arvs(previous_visit, current_visit, arvs_given)
           return nil unless expected_arvs
 
-          calculate_drug_adherence_rate(arvs_given, current_visit[:pill_count], expected_arvs)
+          {
+            concept_id: Nart::Concepts::DRUG_ORDER_ADHERENCE,
+            obs_datetime: current_visit[:encounter_datetime],
+            value_numeric: calculate_drug_adherence_rate(arvs_given,
+                                                         current_visit[:pill_count],
+                                                         expected_arvs)
+          }
         end
 
         # Retrieve ARV pill count for patient on a given visit
