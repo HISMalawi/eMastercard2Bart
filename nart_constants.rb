@@ -53,4 +53,8 @@ module Nart
     LANDMARK = 19
     PHONE_NUMBER = 12
   end
+
+  module RelationshipTypes
+    GUARDIAN = 6
+  end
 end

@@ -6,8 +6,9 @@ module Transformers
       def transform(patient)
         LOGGER.debug("Constructing person for eMastercard patient ##{patient[:patient_id]}.")
 
-        person = EmastercardDb.from_table[:person].select(:gender, :birthdate, :birthdate_estimated)
-                                              .first(person_id: patient[:patient_id])
+        person = EmastercardDb.from_table[:person]
+                              .select(:gender, :birthdate, :birthdate_estimated)
+                              .first(person_id: patient[:patient_id])
 
         {
           names: read_person_names(patient),
@@ -23,9 +24,10 @@ module Transformers
 
       def read_person_names(patient)
         LOGGER.debug("Reading eMastercard person names for patient ##{patient[:patient_id]}")
-        EmastercardDb.from_table[:person_name].select(:given_name, :family_name, :middle_name)
-                                          .where(person_id: patient[:patient_id])
-                                          .to_a
+        EmastercardDb.from_table[:person_name]
+                     .select(:given_name, :family_name, :middle_name)
+                     .where(person_id: patient[:patient_id])
+                     .to_a
       end
 
       def read_person_attributes(patient)
@@ -66,9 +68,10 @@ module Transformers
           {
             person_b: {
               names: [{ given_name: given_name, family_name: family_name, middle_name: nil }],
-              attributes: [{ person_attribute_type: 'Phone number', value: patient[:guardian_phone] }]
+              attributes: [{ person_attribute_type_id: Nart::PersonAttributeTypes::PHONE_NUMBER,
+                             value: patient[:guardian_phone] }]
             },
-            relationship_type: 'Guardian'
+            relationship_type_id: Nart::RelationshipTypes::GUARDIAN
           }
         ]
       end
