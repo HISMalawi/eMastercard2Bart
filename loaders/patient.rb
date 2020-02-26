@@ -10,6 +10,7 @@ module Loaders
       patient_id = load_patient(person_id)
       load_patient_identifiers(patient_id, patient[:identifiers])
       load_encounters(patient_id, patient[:encounters])
+      load_programs(patient_id, patient[:programs])
       patient_id
     end
 
@@ -90,6 +91,7 @@ module Loaders
       orders&.each do |order|
         order = order.dup
         drug_order = order.delete(:drug_order)
+        observation = order.delete(:observation)
 
         order_id = NartDb.into_table[:orders]
                          .insert(uuid: SecureRandom.uuid,
@@ -99,7 +101,9 @@ module Loaders
                                  date_created: DateTime.now,
                                  encounter_id: encounter_id,
                                  **order)
+
         load_drug_order(order_id, drug_order) if drug_order
+        load_observations(patient_id, encounter_id, [{ order_id: order_id, **observation }]) if observation
       end
     end
 
@@ -107,6 +111,34 @@ module Loaders
       LOGGER.debug("Saving drug order for order ##{order_id}")
       NartDb.into_table[:drug_order]
             .insert(order_id: order_id, **drug_order)
+    end
+
+    def self.load_programs(patient_id, programs)
+      LOGGER.debug("Saving patient ##{patient_id} programs")
+      programs.each do |program|
+        program = program.dup
+        states = program.delete(:states)
+
+        patient_program_id = NartDb.into_table[:patient_program]
+                                   .insert(patient_id: patient_id,
+                                           uuid: SecureRandom.uuid,
+                                           date_created: DateTime.now,
+                                           creator: EMR_USER_ID,
+                                           **program)
+        load_patient_states(patient_program_id, states)
+      end
+    end
+
+    def self.load_patient_states(patient_program_id, states)
+      LOGGER.debug("Saving patient_program ##{patient_program_id} states")
+      states.each do |state|
+        NartDb.into_table[:patient_state]
+              .insert(patient_program_id: patient_program_id,
+                      uuid: SecureRandom.uuid,
+                      creator: EMR_USER_ID,
+                      date_created: DateTime.now,
+                      **state)
+      end
     end
   end
 end

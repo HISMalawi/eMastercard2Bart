@@ -25,12 +25,14 @@ module Nart
     TB_NOT_SUSPECTED = 7454
     TYPE_OF_PATIENT = 3289
     UNKNOWN = 1067
+    VIRAL_LOAD = 856
     WEIGHT = 5089
     YES = 1065
   end
 
   module Orders
     DRUG_ORDER = 1
+    LAB = 4
   end
 
   module Encounters
@@ -44,6 +46,15 @@ module Nart
     REGISTRATION = 5
     TREATMENT = 25
     VITALS = 6
+  end
+
+  module PatientStates
+    DEFAULTED = 12
+    DIED = 3
+    ON_TREATMENT = 7
+    PRE_ART = 1
+    TRANSFERRED_OUT = 2
+    TREATMENT_STOPPED = 6
   end
 
   module PatientIdentifierTypes

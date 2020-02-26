@@ -7,6 +7,7 @@
 require_relative 'patient_identifiers'
 require_relative 'person'
 require_relative 'encounters'
+require_relative 'patient_program'
 
 module Transformers
   module Patient
@@ -18,8 +19,7 @@ module Transformers
       {
         person: Person.transform(emastercard_patient),
         encounters: Encounters.transform(emastercard_patient, visits),
-        # states: read_patient_states(sequel, result),
-        # programs: read_patient_programs(sequel, result),
+        programs: [PatientProgram.transform(emastercard_patient, visits)],
         identifiers: PatientIdentifiers.transform(emastercard_patient)
       }
     end
