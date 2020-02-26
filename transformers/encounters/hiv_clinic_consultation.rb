@@ -6,11 +6,13 @@ module Transformers
       class << self
         def transform(patient, visit)
           observations = [side_effects(patient, visit), on_tb_treatment(patient, visit)]
+          orders = [viral_load(patient, visit)]
 
           {
             encounter_type_id: Nart::Encounters::HIV_CLINIC_CONSULTATION,
             encounter_datetime: visit[:encounter_datetime],
-            observations: observations.reject(&:nil?)
+            observations: observations.reject(&:nil?),
+            orders: orders.reject(&:nil?)
           }
         end
 
@@ -48,6 +50,28 @@ module Transformers
                          when 'C' then Nart::Concepts::TB_CONFIRMED_BUT_NOT_ON_TREATMENT
                          end
           }
+        end
+
+        def viral_load(_patient, visit)
+          return nil unless visit[:viral_load_result] && visit[:viral_load_result_symbol]
+
+          {
+            order_type_id: Nart::Orders::LAB,
+            concept_id: Nart::Concepts::VIRAL_LOAD,
+            start_date: visit[:encounter_datetime],
+            accession_number: "#{SITE_PREFIX}-#{next_accession_number}",
+            observation: {
+              concept_id: Nart::Concepts::VIRAL_LOAD,
+              obs_datetime: visit[:encounter_datetime],
+              value_numeric: visit[:viral_load_result],
+              value_text: visit[:viral_load_result_symbol]
+            }
+          }
+        end
+
+        def next_accession_number
+          @accession_number ||= 0
+          @accession_number += 1
         end
       end
     end
