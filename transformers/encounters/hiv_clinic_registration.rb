@@ -11,7 +11,8 @@ module Transformers
             ever_registered_at_art_clinic(patient, visit),
             ever_received_art(patient, visit),
             date_antiretrovirals_started(patient, visit),
-            follow_up_agreement(patient, visit)
+            follow_up_agreement(patient, visit),
+            confirmatory_hiv_test_type(patient, visit)
           ]
 
           {
@@ -46,13 +47,14 @@ module Transformers
         def ever_received_art(patient, visit)
           ever_received_arts = EmastercardDb.find_observation(
             patient[:patient_id],
-            Emastercard::Concepts::EVER_TAKEN_ARVS
+            Emastercard::Concepts::EVER_TAKEN_ARVS,
+            Emastercard::Encounters::ART_STATUS_AT_INITIATION
           )&.[](:value_text)
 
           return nil unless ever_received_arts
 
           {
-            concept_id: EMastercardConcepts::EVER_TAKEN_ARVS,
+            concept_id: Emastercard::Concepts::EVER_TAKEN_ARVS,
             obs_datetime: visit[:encounter_datetime],
             value_coded: case ever_received_arts.upcase
                          when 'Y' then Nart::Concepts::YES
@@ -88,6 +90,26 @@ module Transformers
                          when 'FALSE' then Nart::Concepts::NO
                          end
           }
+        end
+
+        def confirmatory_hiv_test_type(patient, visit)
+          case EmastercardDb.find_observation(patient[:patient_id],
+                                              Emastercard::Concepts::CONFIRMATORY_HIV_TEST, 
+                                              Emastercard::Encounters::ART_CONFIRMATORY_TEST)
+                            &.[](:value_text)
+          when /PCR/i
+            {
+              concept_id: Nart::Concepts::CONFIRMATORY_HIV_TEST_TYPE,
+              obs_datetime: visit[:encounter_datetime],
+              value_coded: Nart::Concepts::DNA_PCR
+            }
+          when /Rapid/i
+            {
+              concept_id: Nart::Concepts::CONFIRMATORY_HIV_TEST_TYPE,
+              obs_datetime: visit[:encounter_datetime],
+              value_coded: Nart::Concepts::HIV_RAPID_TEST
+            }
+          end
         end
       end
     end
