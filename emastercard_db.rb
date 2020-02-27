@@ -7,9 +7,11 @@ require 'yaml'
 
 module EmastercardDb
   class << self
-    def find_observation(person_id, concept_id)
+    def find_observation(person_id, concept_id, encounter_type = nil)
+      encounter_type ||= Emastercard::Encounters::ART_REGISTRATION
+
       from_table[:obs].join(:encounter, encounter_id: :encounter_id)
-                      .first(encounter_type: Emastercard::Encounters::ART_VISIT,
+                      .first(encounter_type: encounter_type,
                              concept_id: concept_id,
                              person_id: person_id)
     end
