@@ -80,6 +80,10 @@ module Transformers
           regimen_index, _regimen_category = split_regimen_name(regimen_name)
           return [] unless regimen_index
 
+          if regimen_index == 1 || regimen_index == 3
+            return prescribe_legacy_arvs(regimen_name)
+          end
+
           if patient_weight.nil?
             LOGGER.warn("Patient weight not available, choosing first combination of #{regimen_index}")
             return REGIMEN_COMBINATIONS[regimen_name]&.first || []
@@ -102,6 +106,14 @@ module Transformers
           end
 
           drug_combinations.first || []
+        end
+
+        def prescribe_legacy_arvs(regimen_name)
+          case regimen_name
+          when '1A' then [613]
+          when '1P' then [72]
+          else [955] # Assuming that 3A or 3P
+          end
         end
 
         def guess_prescribed_cpt(patient_weight)
