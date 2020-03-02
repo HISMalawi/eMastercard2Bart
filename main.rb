@@ -2,6 +2,7 @@
 require 'byebug'
 require 'date'
 require 'json'
+require 'parallel'
 require 'securerandom'
 require 'yaml'
 
@@ -41,21 +42,27 @@ end
 begin
   errors = {}
   total_patients = 0
+  lock = Mutex.new
 
-  EmastercardReader.read_patients.each do |patient|
+  Parallel.each(EmastercardReader.read_patients, in_threads: 8) do |patient|
     patient[:errors] = [] # For logging transformation errors
     nart_patient = Transformers::Patient.transform(patient)
 
     unless patient[:errors].empty?
-      errors[nart_patient_tag(nart_patient)] = patient[:errors]
+      lock.synchronize do
+        errors[nart_patient_tag(nart_patient)] = patient[:errors]
+      end
     end
 
     Loaders::Patient.load(nart_patient)
-    total_patients += 1
+
+    lock.synchronize do
+      total_patients += 1
+    end
   end
 ensure
   print "----- Total patients processed: #{total_patients}\n"
-  print "----- Total patients with errors: #{errors.size}]n"
+  print "----- Total patients with errors: #{errors.size}\n"
 
   File.open('errors.yaml', 'w') do |fout|
     fout.write("Total patients processed: #{total_patients}\n")
