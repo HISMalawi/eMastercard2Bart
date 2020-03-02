@@ -10,6 +10,12 @@ module Transformers
                               .select(:gender, :birthdate, :birthdate_estimated)
                               .first(person_id: patient[:patient_id])
 
+        %i[gender birthdate].each do |field|
+          next unless person[field].nil?
+
+          patient[:errors] << "Missing #{field}"
+        end
+
         {
           names: read_person_names(patient),
           attributes: read_person_attributes(patient),
@@ -47,7 +53,10 @@ module Transformers
 
         addresses.each do |address|
           landmark = address[:city_village]&.strip
-          next if landmark.nil? || landmark.empty?
+          if landmark.nil? || landmark.empty?
+            patient[:errors] << 'Missing residential address'
+            next
+          end
 
           attributes.append(
             person_attribute_type_id: Nart::PersonAttributeTypes::LANDMARK,

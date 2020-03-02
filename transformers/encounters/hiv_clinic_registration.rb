@@ -31,7 +31,10 @@ module Transformers
             Emastercard::Encounters::ART_REGISTRATION
           )&.[](:value_text)
 
-          return nil unless registration_type
+          unless registration_type
+            patient[:errors] << "Missing clinical_registration_type on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Nart::Concepts::EVER_REGISTERED_AT_ART_CLINIC,
@@ -51,7 +54,10 @@ module Transformers
             Emastercard::Encounters::ART_STATUS_AT_INITIATION
           )&.[](:value_text)
 
-          return nil unless ever_received_arts
+          unless ever_received_arts
+            patient[:errors] << "Missing ever_received_art on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Emastercard::Concepts::EVER_TAKEN_ARVS,
@@ -70,7 +76,10 @@ module Transformers
             Emastercard::Encounters::ART_REGISTRATION
           )&.[](:value_datetime)
 
-          return nil unless art_start_date
+          unless art_start_date
+            patient[:errors] << "Missing date_antiretrovirals_started on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Nart::Concepts::DATE_ANTIRETROVIRALS_STARTED,
@@ -80,7 +89,10 @@ module Transformers
         end
 
         def follow_up_agreement(patient, visit)
-          return nil unless patient[:follow_up]
+          unless patient[:follow_up]
+            patient[:errors] << "Missing follow_up_agreement on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Nart::Concepts::AGREES_TO_FOLLOW_UP,
@@ -109,6 +121,9 @@ module Transformers
               obs_datetime: visit[:encounter_datetime],
               value_coded: Nart::Concepts::HIV_RAPID_TEST
             }
+          else
+            patient[:errors] << "Missing confirmatory_hiv_test_type on #{visit[:encounter_datetime]}"
+            nil
           end
         end
       end

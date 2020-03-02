@@ -16,8 +16,11 @@ module Transformers
           }
         end
 
-        def side_effects(_patient, visit)
-          return nil unless visit[:'side effects']
+        def side_effects(patient, visit)
+          unless visit[:'side effects']
+            patient[:errors] << "Missing side effects on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Nart::Concepts::ART_SIDE_EFFECTS,
@@ -37,8 +40,11 @@ module Transformers
           }
         end
 
-        def on_tb_treatment(_patient, visit)
-          return nil unless visit[:tb_tatus] # tb_tatus [sic] - that's how it's named in eMastercard]
+        def on_tb_treatment(patient, visit)
+          unless visit[:tb_tatus] # tb_tatus [sic] - that's how it's named in eMastercard]
+            patient[:errors] << "Missing TB status on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Nart::Concepts::TB_STATUS,

@@ -33,16 +33,22 @@ module Transformers
                             &.[](:value_text)
           when /Last 2years/i
             {
-              concept_id: Nart::Concepts::PTB_WITHIN_LAST_2_YEARS,
+              concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
               obs_datetime: visit[:encounter_datetime],
-              value_coded: Nart::Concepts::YES
+              value_coded: Nart::Concepts::PTB_WITHIN_LAST_2_YEARS
+            }
+          when /Curr/i
+            {
+              concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
+              obs_datetime: visit[:encounter_datetime],
+              value_coded: Nart::Concepts::CURRENT_EPISODE_OF_TB
             }
           when /Never > 2years/i
-            {
-              concept_id: Nart::Concepts::PTB_WITHIN_LAST_2_YEARS,
-              obs_datetime: visit[:encounter_datetime],
-              value_coded: Nart::Concepts::NO
-            }
+            # This isn't explicitly saved in NART
+            nil
+          else
+            patient[:errors] << "Missing TB status initiation on #{visit[:encounter_datetime]}"
+            nil
           end
         end
 
@@ -107,7 +113,8 @@ module Transformers
           'clinical stage 1' => Nart::Concepts::WHO_STAGE_1,
           'clinical stage 2' => Nart::Concepts::WHO_STAGE_2,
           'clinical stage 3' => Nart::Concepts::WHO_STAGE_3,
-          'clinical stage 4' => Nart::Concepts::WHO_STAGE_4
+          'clinical stage 4' => Nart::Concepts::WHO_STAGE_4,
+          'pshd' => Nart::Concepts::PRESUMED_SEVERE_HIV_IN_INFANTS
         }.freeze
 
         def reason_for_art_eligibility(patient, visit)
@@ -117,10 +124,16 @@ module Transformers
                                 &.[](:value_text)
                                 &.downcase
 
-          return nil unless stage
+          unless stage
+            patient[:errors] << "Missing who_stage on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           concept_id = WHO_STAGES_CONCEPT_MAP[stage]
-          return nil unless concept_id
+          unless concept_id
+            patient[:errors] << "Unknown who_stage 'stage' on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
@@ -181,7 +194,10 @@ module Transformers
                                                     Emastercard::Encounters::ART_STATUS_AT_INITIATION)
                                   &.[](:value_text)
                                   &.downcase
-          return nil unless diseases
+          unless diseases
+            patient[:errors] << "Missing hiv_related_diseases on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           JSON.parse(diseases).map do |disease|
             disease = disease['value']
@@ -201,10 +217,16 @@ module Transformers
           cd4_obs = EmastercardDb.find_observation(patient[:patient_id],
                                                    Emastercard::Concepts::CD4_COUNT,
                                                    Emastercard::Encounters::ART_STATUS_AT_INITIATION)
-          return nil unless cd4_obs
+          unless cd4_obs
+            patient[:errors] << "Missing cd4_count on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           cd4_value = cd4_obs[:value_numeric] || cd4_obs[:value_text]&.to_f
-          return unless cd4_value
+          unless cd4_value
+            patient[:errors] << "Missing cd4_count on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
           observations = []
 

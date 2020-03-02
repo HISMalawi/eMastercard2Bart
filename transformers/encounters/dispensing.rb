@@ -6,8 +6,13 @@ module Transformers
       class << self
         def transform(patient, visit, treatment_encounter)
           observations = treatment_encounter[:orders].map do |order|
-            amount_dispensed = find_drug_amount_dispensed(order[:drug_order][:drug_inventory_id], visit)
-            next nil unless amount_dispensed
+            drug_id = order[:drug_order][:drug_inventory_id]
+            amount_dispensed = find_drug_amount_dispensed(patient, drug_id, visit)
+
+            unless amount_dispensed
+              patient[:errors] << "No amount dispensed for drug ##{drug_id} on #{visit[:encounter_datetime]}"
+              next nil
+            end
 
             if order[:drug_order][:equivalent_daily_dose]&.positive?
               daily_dose = amount_dispensed / order[:drug_order][:equivalent_daily_dose]
@@ -19,7 +24,7 @@ module Transformers
             {
               concept_id: Nart::Concepts::AMOUNT_DISPENSED,
               obs_datetime: visit[:encounter_datetime],
-              value_drug: order[:drug_order][:drug_inventory_id],
+              value_drug: drug_id,
               value_numeric: amount_dispensed
             }
           end
@@ -31,7 +36,7 @@ module Transformers
           }
         end
 
-        def find_drug_amount_dispensed(drug_id, visit)
+        def find_drug_amount_dispensed(patient, drug_id, visit)
           concept_id = if drug_id == Nart::Concepts::COTRIMOXAZOLE
                          Emastercard::Concepts::CPT_DISPENSED
                        else
@@ -49,9 +54,18 @@ module Transformers
                                      .select(:value_numeric, :value_text)
                                      .first
 
-          return nil unless observation
+          unless observation
+            patient[:errors] << "Missing amount_dispensed for ARV or CPT on #{visit[:encounter_datetime]}"
+            return nil
+          end
 
-          observation[:value_numeric] || observation[:value_text]&.to_i
+          amount_dispensed = observation[:value_numeric] || observation[:value_text]&.to_i
+          unless amount_dispensed
+            patient[:errors] << "Missing amount_dispensed for ARV or CPT on #{visit[:encounter_datetime]}"
+            return nil
+          end
+
+          amount_dispensed
         end
       end
     end

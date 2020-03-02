@@ -67,6 +67,21 @@ module Loaders
         observation = observation.dup
         children = observation.delete(:children)
 
+        if observation[:drug_order]
+          # ART adherence sets this as a link to previous visit drug_order.
+          order = observation.delete(:drug_order)
+          day_start = order[:start_date].strftime('%Y-%m-%d 00:00:00')
+          day_end = order[:start_date].strftime('%Y-%m-%d 23:59:59')
+          order = NartDb.from_table[:orders]
+                        .join(:drug_order, order_id: :order_id)
+                        .join(:encounter, encounter_id: Sequel[:orders][:encounter_id])
+                        .first(start_date: day_start..day_end,
+                               Sequel[:encounter][:encounter_type] => Nart::Encounters::TREATMENT,
+                               Sequel[:drug_order][:drug_inventory_id] => order[:drug_id])
+
+          observation[:order_id] = order&.[](:order_id)
+        end
+
         observation_id = NartDb.into_table[:obs]
                                .insert(uuid: SecureRandom.uuid,
                                        creator: EMR_USER_ID,

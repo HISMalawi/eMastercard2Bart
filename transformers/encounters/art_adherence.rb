@@ -8,26 +8,60 @@ module Transformers
           {
             encounter_type_id: Nart::Encounters::ART_ADHERENCE,
             encounter_datetime: current_visit[:encounter_datetime],
-            observations: [art_adherence(patient, previous_visit, current_visit)].reject(&:nil?)
+            observations: art_adherence(patient, previous_visit, current_visit).reject(&:nil?)
           }
         end
 
         def art_adherence(patient, previous_visit, current_visit)
-          return nil unless current_visit[:pill_count]
+          unless current_visit[:pill_count]
+            patient[:errors] << "Missing pill_count on #{current_visit[:encounter_datetime]}"
+            return []
+          end
 
-          arvs_given = number_of_arvs_given(patient[:patient_id], previous_visit[:encounter_datetime]) 
-          return nil unless arvs_given
+          unless previous_visit[:weight]
+            patient[:errors] << "Missing previous visit weight required for adherence on #{current_visit[:encounter_datetime]}"
+            return []
+          end
 
-          expected_arvs = expected_remaining_arvs(previous_visit, current_visit, arvs_given)
-          return nil unless expected_arvs
+          number_of_drugs_prescribed = number_of_arvs_given(patient[:patient_id],
+                                                            previous_visit[:encounter_datetime]) 
 
-          {
-            concept_id: Nart::Concepts::DRUG_ORDER_ADHERENCE,
-            obs_datetime: current_visit[:encounter_datetime],
-            value_numeric: calculate_drug_adherence_rate(arvs_given,
-                                                         current_visit[:pill_count],
-                                                         expected_arvs)
-          }
+          if number_of_drugs_prescribed.nil? || number_of_drugs_prescribed.zero?
+            # Won't log this issue here because it already is logged under
+            # dispensing encounter.
+            return []
+          end
+
+          drugs_prescribed_on_visit(previous_visit).map do |drug_id|
+            dose = find_arvs_daily_dose(drug_id, previous_visit[:weight])
+            expected_remaining_drugs = expected_remaining_arvs(dose,
+                                                               number_of_drugs_prescribed,
+                                                               previous_visit[:encounter_datetime],
+                                                               current_visit[:encounter_datetime])
+
+            adherence_rate = calculate_drug_adherence_rate(number_of_drugs_prescribed,
+                                                           current_visit[:pill_count],
+                                                           expected_remaining_drugs)
+
+            {
+              concept_id: Nart::Concepts::DRUG_ORDER_ADHERENCE,
+              obs_datetime: current_visit[:encounter_datetime],
+              drug_order: {
+                drug_id: drug_id,
+                start_date: previous_visit[:encounter_datetime]
+              },
+              value_numeric: adherence_rate
+            }
+          end
+        end
+
+        def drugs_prescribed_on_visit(visit)
+          return [] if visit[:art_regimen].nil? || visit[:weight].nil?
+
+          Transformers::Encounters::Treatment.guess_prescribed_arvs({ errors: [] },
+                                                                    visit[:art_regimen],
+                                                                    visit[:weight],
+                                                                    visit[:encounter_datedate])
         end
 
         # Retrieve ARV pill count for patient on a given visit
@@ -48,39 +82,23 @@ module Transformers
 
         # Calculates the expected remaining number of ARVs prescribed on initial_visit
         # as of current_visit.
-        def expected_remaining_arvs(initial_visit, current_visit, arvs_given_on_initial_visit)
-          daily_dose = find_arvs_daily_dose(initial_visit[:regimen], initial_visit[:weight])
-          return nil unless daily_dose
-
-          number_of_days_elapsed = days_between(initial_visit[:encounter_datetime], current_visit[:encounter_datetime])
-          arvs_given_on_initial_visit - (daily_dose * number_of_days_elapsed)
+        def expected_remaining_arvs(drug_daily_dose, arvs_given_on_initial_visit,
+                                    previous_visit_date, current_visit_date)
+          number_of_days_elapsed = days_between(previous_visit_date, current_visit_date)
+          arvs_given_on_initial_visit - (drug_daily_dose * number_of_days_elapsed)
         end
 
         # Returns total number of `regimen` pills to be taken everyday by patient
         # of given weight.
-        def find_arvs_daily_dose(regimen, weight)
-          arvs = Treatment.guess_prescribed_arvs(regimen, weight)
-          return 0 if arvs.empty?
+        def find_arvs_daily_dose(drug_id, weight)
+          dose = Treatment.find_arv_dose(drug_id, weight)
 
-          dose = find_arv_dose(arv, weight)
           unless dose
-            LOGGER.warn("Could find dose for regimen: #{regimen}")
+            LOGGER.warn("Could find dose for drug ##{drug_id}")
             return 0
           end
 
           dose[:am] + dose[:pm]
-        end
-
-        def find_arv_dose(drug_id, weight)
-          LOGGER.debug("Retrieving drug ##{drug_id} dose for #{weight}Kg patients")
-          NartDb.from_table[:moh_regimen_doses]
-                .join(:moh_regimen_ingredient, dose_id: :dose_id)
-                .where(Sequel[:moh_regimen_ingredient][:drug_inventory_id] => drug_id)
-                .where do
-                  (Sequel[:moh_regimen_ingredient][:min_weight] <= weight)\
-                  & (Sequel[:moh_regimen_ingredient][:max_weight] >= weight)
-                end
-                .first
         end
 
         def days_between(start_date, end_date)
@@ -89,12 +107,15 @@ module Transformers
         end
 
         def calculate_drug_adherence_rate(drugs_received_on_last_visit, actual_remaining_drugs, expected_remaining_drugs)
-          return 100 if actual_remaining_drugs == expected_remaining_drugs
+          if drugs_received_on_last_visit == expected_remaining_drugs
+            # Adherence is being estimated on same day of prescription
+            return 100
+          end
 
-          drugs_consumed = drugs_received_on_last_visit - actual_remaining_drugs
-          doses_missed = (actual_remaining_drugs - expected_remaining_drugs)
+          actual_consumption = drugs_received_on_last_visit - actual_remaining_drugs
+          expected_consumption = drugs_received_on_last_visit - expected_remaining_drugs
 
-          (drugs_consumed / doses_missed).round(2).abs * 100
+          (actual_consumption / expected_consumption).round(2).abs * 100
         end
       end
     end

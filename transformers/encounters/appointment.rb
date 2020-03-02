@@ -21,12 +21,15 @@ module Transformers
             visit[:encounter_datetime]
           )
 
-          return nil unless observation
+          unless observation
+            patient[:errors] << "Missing appointment date on visit ##{visit[:encounter_datetime]}"
+            return nil
+          end
 
           {
             concept_id: Nart::Concepts::NEXT_APPOINTMENT_DATE,
             obs_datetime: visit[:encounter_datetime],
-            value_datetime: observation[:value_datetime],
+            value_datetime: observation[:value_datetime]
           }
         end
       end

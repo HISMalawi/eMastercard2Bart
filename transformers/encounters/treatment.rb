@@ -5,9 +5,9 @@ module Transformers
   module Encounters
     module Treatment
       class << self
-        def transform(_patient, visit)
+        def transform(patient, visit)
           visit_date = visit[:encounter_datetime]
-          drugs = guess_prescribed_arvs(visit[:art_regimen], visit[:weight], visit_date)
+          drugs = guess_prescribed_arvs(patient, visit[:art_regimen], visit[:weight], visit_date)
 
           if visit[:cpt_ipt_given_options]&.casecmp?('Yes')
             drugs << guess_prescribed_cpt(visit[:weight])
@@ -17,7 +17,7 @@ module Transformers
             encounter_type_id: Nart::Encounters::TREATMENT,
             encounter_datetime: visit[:encounter_datetime],
             orders: drugs.map do |drug_id|
-              dose = ArtAdherence.find_arv_dose(drug_id, visit[:weight])
+              dose = find_arv_dose(drug_id, visit[:weight])
 
               {
                 order_type_id: Nart::Orders::DRUG_ORDER,
@@ -32,6 +32,20 @@ module Transformers
             end
           }
         end
+
+        def find_arv_dose(drug_id, weight)
+          LOGGER.debug("Retrieving drug ##{drug_id} dose for #{weight}Kg patients")
+          NartDb.from_table[:moh_regimen_doses]
+                .join(:moh_regimen_ingredient, dose_id: :dose_id)
+                .where(Sequel[:moh_regimen_ingredient][:drug_inventory_id] => drug_id)
+                .where do
+                  (Sequel[:moh_regimen_ingredient][:min_weight] <= weight)\
+                  & (Sequel[:moh_regimen_ingredient][:max_weight] >= weight)
+                end
+                .first
+        end
+
+
 
         REGIMEN_COMBINATIONS = {
           # ABC/3TC (Abacavir and Lamivudine 60/30mg tablet) = 733
@@ -73,16 +87,20 @@ module Transformers
           17 => [Set.new([30, 1044]), Set.new([11, 969])]
         }.freeze
 
-        def guess_prescribed_arvs(regimen_name, patient_weight, _date = nil)
+        def guess_prescribed_arvs(patient, regimen_name, patient_weight, date)
           LOGGER.debug("Guestimating ARV prescription for #{patient_weight}Kg patient under regimen #{regimen_name}")
-          return [] unless regimen_name
+          unless regimen_name
+            patient[:errors] << "Missing art_regimen on #{date}"
+            return []
+          end
 
           regimen_index, _regimen_category = split_regimen_name(regimen_name)
-          return [] unless regimen_index
-
-          if regimen_index == 1 || regimen_index == 3
-            return prescribe_legacy_arvs(regimen_name)
+          unless regimen_index
+            patient[:errors] << "Invalid regimen name '#{regimen_name}' on #{date}"
+            return []
           end
+
+          return prescribe_legacy_arvs(regimen_name) if [1, 3].include?(regimen_index)
 
           if patient_weight.nil?
             LOGGER.warn("Patient weight not available, choosing first combination of #{regimen_index}")
@@ -98,7 +116,10 @@ module Transformers
                         .where { (min_weight <= patient_weight) & (max_weight >= patient_weight) }
                         .map(:drug_inventory_id)
 
-          return [] if drugs.empty?
+          if drugs.empty?
+            patient[:errors] << "Non standard regimen #{regimen_name} for patient of weight #{patient_weight} on #{date}"
+            return []
+          end
 
           drug_combinations = form_regimen_combinations(regimen_index, drugs)
           if drug_combinations.size > 1

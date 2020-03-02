@@ -16,14 +16,15 @@ require_relative 'encounters/appointment'
 
 module Transformers
   module Encounters
-    def self.transform(patient, visits, previous_visit = nil)
+    def self.transform(patient, visits, previous_visit = nil, person)
       return [] if visits.empty?
 
       visit = visits.first
       encounters = []
 
-      if previous_visit.nil?
-        # This must be an initial visit
+      is_initial_visit = previous_visit.nil?
+
+      if is_initial_visit
         encounters << Encounters::Registration.transform(patient, visit)
         encounters << Encounters::HivClinicRegistration.transform(patient, visit)
         encounters << Encounters::HivStaging.transform(patient, visit)
@@ -34,14 +35,14 @@ module Transformers
 
       # Append encounters that occur on every visit
       encounters << Encounters::HivReception.transform(patient, visit)
-      encounters << Encounters::Vitals.transform(patient, visit)
+      encounters << Encounters::Vitals.transform(patient, visit, is_initial_visit, person)
       encounters << Encounters::HivClinicConsultation.transform(patient, visit)
       # encounters << hiv_clinic_consultation_clinician(patient, visit_date)
       encounters << Encounters::Treatment.transform(patient, visit)
       encounters << Encounters::Dispensing.transform(patient, visit, encounters.last)
       encounters << Encounters::Appointment.transform(patient, visit)
 
-      encounters + transform(patient, visits[1..visits.size], visit)
+      encounters + transform(patient, visits[1..visits.size], visit, person)
     end
   end
 end
