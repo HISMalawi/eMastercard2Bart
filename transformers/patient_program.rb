@@ -37,6 +37,7 @@ module Transformers
       when 'STOP' then Nart::PatientStates::TREATMENT_STOPPED
       when 'DEF' then Nart::PatientStates::DEFAULTED
       when 'OT' then Nart::PatientStates::ON_TREATMENT
+      when 'PT' then Nart::PatientStates::PRE_ART
       end
     end
 
@@ -50,17 +51,36 @@ module Transformers
     # Returns outcomes that are inferred from various conditions a patient
     # is under (eg on treatment)
     def self.find_patient_implicit_outcomes(patient_id)
-      EmastercardDb.from_table[:obs]
-                   .join(:encounter, encounter_id: :encounter_id)
-                   .where(person_id: patient_id,
-                          concept_id: [Emastercard::Concepts::ARVS_DISPENSED,
-                                       Emastercard::Concepts::CPT_DISPENSED],
-                          Sequel[:obs][:voided] => 0,
-                          Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_VISIT)
-                   .exclude(value_text: nil, value_numeric: nil)
-                   .order(:encounter_datetime)
-                   .select(:encounter_datetime)
-                   .map { |observation| [observation[:encounter_datetime], 'OT'] }
+      on_treatment_outcomes = EmastercardDb.from_table[:obs]
+                                           .join(:encounter, encounter_id: :encounter_id)
+                                           .where(person_id: patient_id,
+                                                  concept_id: Emastercard::Concepts::ARVS_DISPENSED,
+                                                  Sequel[:obs][:voided] => 0,
+                                                  Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_VISIT)
+                                           .exclude(value_text: nil, value_numeric: nil)
+                                           .order(:encounter_datetime)
+                                           .select(:encounter_datetime)
+                                           .map { |observation| [observation[:encounter_datetime], 'OT'] }
+
+      initial_treatment_date = on_treatment_outcomes.first&.[](0) || DateTime.now
+
+      pre_art_outcome_date = EmastercardDb.from_table[:obs]
+                                          .join(:encounter, encounter_id: :encounter_id)
+                                          .where(person_id: patient_id,
+                                                 concept_id: Emastercard::Concepts::CPT_DISPENSED,
+                                                 Sequel[:obs][:voided] => 0,
+                                                 Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_VISIT)
+                                          .where { Sequel[:encounter][:encounter_datetime] < initial_treatment_date }
+                                          .exclude(value_text: nil, value_numeric: nil)
+                                          .order(:encounter_datetime)
+                                          .first
+                                          &.[](:encounter_datetime)
+
+      if pre_art_outcome_date
+        on_treatment_outcomes.insert(0, [pre_art_outcome_date, 'PT'])
+      end
+
+      on_treatment_outcomes
     end
 
     # Returns outcomes that are explicitly set in eMastercard.
