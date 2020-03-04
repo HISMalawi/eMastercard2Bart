@@ -10,6 +10,7 @@ module Transformers
           drugs = guess_prescribed_arvs(patient, visit[:art_regimen], visit[:weight], visit_date)
 
           if visit[:cpt_ipt_given_options]&.casecmp?('Yes')
+            drugs = drugs.dup
             drugs << guess_prescribed_cpt(visit[:weight])
           end
 
@@ -45,8 +46,6 @@ module Transformers
                 .first
         end
 
-
-
         REGIMEN_COMBINATIONS = {
           # ABC/3TC (Abacavir and Lamivudine 60/30mg tablet) = 733
           # NVP (Nevirapine 50 mg tablet) = 968
@@ -80,7 +79,7 @@ module Transformers
           10 => [Set.new([734, 73])],
           11 => [Set.new([736, 74]), Set.new([736, 73]), Set.new([736, 1044]), Set.new([39, 73]), Set.new([39, 74])],
           12 => [Set.new([976, 977, 982])],
-          13 => [Set.new([983])],
+          13 => [Set.new([983]).freeze],
           14 => [Set.new([984, 982])],
           15 => [Set.new([969, 982])],
           16 => [Set.new([1043, 1044]), Set.new([954, 969])],
@@ -89,9 +88,11 @@ module Transformers
 
         def guess_prescribed_arvs(patient, regimen_name, patient_weight, date)
           LOGGER.debug("Guestimating ARV prescription for #{patient_weight}Kg patient under regimen #{regimen_name}")
-          unless regimen_name
+          if regimen_name.nil?
             patient[:errors] << "Missing art_regimen on #{date}"
             return []
+          elsif regimen_name.casecmp?('Other')
+            return [nil]
           end
 
           regimen_index, _regimen_category = split_regimen_name(regimen_name)
@@ -104,7 +105,7 @@ module Transformers
 
           if patient_weight.nil?
             LOGGER.warn("Patient weight not available, choosing first combination of #{regimen_index}")
-            return REGIMEN_COMBINATIONS[regimen_name]&.first || []
+            return REGIMEN_COMBINATIONS[regimen_index]&.first || []
           end
 
           regimen_id = NartDb.from_table[:moh_regimens]
@@ -149,6 +150,8 @@ module Transformers
         end
 
         def drug_concept_id(drug_id)
+          return Nart::Concepts::UNKNOWN_ARV unless drug_id
+
           @drug_concept_ids ||= {}
           return @drug_concept_ids[drug_id] if @drug_concept_ids.include?(drug_id)
 
