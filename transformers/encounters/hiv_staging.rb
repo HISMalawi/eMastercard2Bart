@@ -15,12 +15,16 @@ module Transformers
             *who_stages_criteria(patient, visit),
             *cd4_count(patient, visit),
             *(visit[:gender]&.casecmp?('F') ? pregnant_or_breastfeeding(patient, visit) : [nil])
-          ]
+          ].reject(&:nil?)
+
+          if observations.empty?
+            observations = [unknown_reason_for_starting_art(patient, visit)]
+          end
 
           {
             encounter_type_id: Nart::Encounters::HIV_STAGING,
             encounter_datetime: visit[:encounter_datetime],
-            observations: observations.reject(&:nil?)
+            observations: observations
           }
         end
 
@@ -280,6 +284,15 @@ module Transformers
           || (cd4_value <= 350 && threshold == Nart::Concepts::CD4_LE_350)\
           || (cd4_value <= 500 && threshold == Nart::Concepts::CD4_LE_500)\
           || (cd4_value <= 750 && threshold == Nart::Concepts::CD4_LE_750)
+        end
+
+        def unknown_reason_for_starting_art(patient, visit)
+          {
+            concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
+            obs_datetime: visit[:encounter_datetime],
+            value_coded: Nart::Concepts::UNKNOWN,
+            comments: 'Patient had no reason for starting in eMastercard'
+          }
         end
       end
     end
