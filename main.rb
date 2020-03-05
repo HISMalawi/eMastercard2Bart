@@ -39,12 +39,32 @@ def nart_patient_tag(nart_patient)
   "#{arv_number} - #{formatted_name}"
 end
 
+def total_patients_read_on_last_run
+  return 0 unless File.exist?('errors.yaml')
+
+  File.open('errors.yaml') { |fin| YAML.safe_load(fin.readline)['total_patients_processed'] } || 0
+end
+
+def errors_on_last_run
+  return {} unless File.exist?('errors.yaml')
+
+  errors = File.open('errors.yaml') do |fin|
+    3.times { fin.readline } # Errors start on fourth line
+
+    YAML.safe_load(fin)
+  end
+
+  errors || {}
+end
+
 begin
-  errors = {}
-  total_patients = 0
+  errors = errors_on_last_run
+  total_patients = total_patients_read_on_last_run
   lock = Mutex.new
 
-  Parallel.each(EmastercardReader.read_patients, in_threads: 8) do |patient|
+  patients = EmastercardReader.read_patients(from: total_patients)
+
+  Parallel.each(patients, in_threads: 8) do |patient|
     patient[:errors] = [] # For logging transformation errors
     nart_patient = Transformers::Patient.transform(patient)
 
@@ -54,19 +74,23 @@ begin
       end
     end
 
-    Loaders::Patient.load(nart_patient)
+    NartDb.into_table.transaction do
+      Loaders::Patient.load(nart_patient)
 
-    lock.synchronize do
-      total_patients += 1
+      lock.synchronize do
+        total_patients += 1
+      end
     end
+
+    # raise Parallel::Break if total_patients >= 750
   end
 ensure
   print "----- Total patients processed: #{total_patients}\n"
   print "----- Total patients with errors: #{errors.size}\n"
 
   File.open('errors.yaml', 'w') do |fout|
-    fout.write("Total patients processed: #{total_patients}\n")
-    fout.write("Total patients with errors: #{errors.size}\n")
+    fout.write("total_patients_processed: #{total_patients}\n")
+    fout.write("total_patients_with_errors: #{errors.size}\n")
     fout.write(YAML.dump(errors))
   end
 end

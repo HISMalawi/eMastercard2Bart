@@ -3,9 +3,9 @@
 module EmastercardReader
   class << self
     # Reads all patients from the database and returns an Enumerator.
-    def read_patients(batch_size: 1000)
-      LOGGER.info("Reading patients from eMastercard db in batches of #{batch_size}...")
-      offset = 0
+    def read_patients(from: 0, batch_size: 1000)
+      LOGGER.info("Reading patients from eMastercard db starting at #{from} in batches of #{batch_size}...")
+      offset = from
 
       Enumerator.new do |enum|
         loop do
