@@ -39,10 +39,9 @@ module Transformers
           NartDb.from_table[:moh_regimen_doses]
                 .join(:moh_regimen_ingredient, dose_id: :dose_id)
                 .where(Sequel[:moh_regimen_ingredient][:drug_inventory_id] => drug_id)
-                .where do
-                  (Sequel[:moh_regimen_ingredient][:min_weight] <= weight)\
-                  & (Sequel[:moh_regimen_ingredient][:max_weight] >= weight)
-                end
+                .where(Sequel.lit('CAST(min_weight AS DECIMAL(4, 1)) <= :weight
+                                   AND CAST(max_weight AS DECIMAL(4, 1)) >= :weight',
+                                  weight: weight&.round(1)))
                 .first
         end
 
@@ -114,7 +113,9 @@ module Transformers
 
           drugs = NartDb.from_table[:moh_regimen_ingredient]
                         .where(regimen_id: regimen_id)
-                        .where { (min_weight <= patient_weight) & (max_weight >= patient_weight) }
+                        .where(Sequel.lit('CAST(min_weight AS DECIMAL(4, 1)) <= :weight
+                                           AND CAST(max_weight AS DECIMAL(4, 1)) >= :weight',
+                                          weight: patient_weight&.round(1)))
                         .map(:drug_inventory_id)
 
           if drugs.empty?
@@ -145,7 +146,9 @@ module Transformers
           # Make sure we get only the cpt for patients with the given weight
           NartDb.from_table[:moh_regimen_ingredient]
                 .where(drug_inventory_id: cpt_drug_ids)
-                .where { min_weight <= patient_weight && max_weight >= patient_weight }
+                .where(Sequel.lit('CAST(min_weight AS DECIMAL(4, 1)) <= :weight
+                                   AND CAST(max_weight AS DECIMAL(4, 1)) >= :weight',
+                                  weight: patient_weight&.round(1)))
                 .get(:drug_inventory_id)
         end
 
