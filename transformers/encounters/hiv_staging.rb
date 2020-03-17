@@ -12,6 +12,7 @@ module Transformers
           observations = [
             tb_status_at_initiation(patient, visit),
             reason_for_art_eligibility(patient, visit),
+            kaposis_sarcoma(patient, visit),
             *who_stages_criteria(patient, visit),
             *cd4_count(patient, visit),
             *(visit[:gender]&.casecmp?('F') ? pregnant_or_breastfeeding(patient, visit) : [nil])
@@ -143,6 +144,22 @@ module Transformers
             concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
             obs_datetime: visit[:encounter_datetime],
             value_coded: concept_id
+          }
+        end
+
+        def kaposis_sarcoma(patient, visit)
+          observation = EmastercardDb.find_all_observations_by_encounter(patient[:patient_id],
+                                                                         Emastercard::Concepts::KS,
+                                                                         Emastercard::Encounters::ART_STATUS_AT_INITIATION)
+                                     .exclude(value_text: nil)
+                                     .first
+
+          return nil unless observation&.[](:value_text)&.casecmp?('Y')
+
+          {
+            concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
+            obs_datetime: visit[:encounter_datetime],
+            value_coded: Nart::Concepts::KAPOSIS_SARCOMA
           }
         end
 
