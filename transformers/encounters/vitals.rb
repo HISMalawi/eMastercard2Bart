@@ -30,8 +30,10 @@ module Transformers
               vitals << {
                 concept_id: concept_id, obs_datetime: visit[:encounter_datetime], value_numeric: visit[name]
               }
+            elsif name == :weight
+              patient[:errors] << "Missing weight on initial visit #{visit[:encounter_datetime]}"
             else
-              patient[:errors] << "Missing #{name} on initial visit #{visit[:encounter_datetime]}"
+              LOGGER.warn("Missing height on visit #{visit[:encounter_datetime]}")
             end
           end
         end

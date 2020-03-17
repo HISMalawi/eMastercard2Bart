@@ -36,7 +36,7 @@ module Transformers
                                               Emastercard::Concepts::INITIAL_TB_STATUS,
                                               Emastercard::Encounters::ART_STATUS_AT_INITIATION)
                             &.[](:value_text)
-          when /Last 2years/i
+          when /Last 2(yrs|years)/i
             {
               concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
               obs_datetime: visit[:encounter_datetime],
@@ -210,11 +210,12 @@ module Transformers
         }.freeze
 
         def who_stages_criteria(patient, visit)
-          diseases = EmastercardDb.find_observation(patient[:person_id],
+          diseases = EmastercardDb.find_observation(patient[:patient_id],
                                                     Emastercard::Concepts::HIV_RELATED_DISEASES,
                                                     Emastercard::Encounters::ART_STATUS_AT_INITIATION)
                                   &.[](:value_text)
                                   &.downcase
+
           unless diseases
             patient[:errors] << "Missing hiv_related_diseases on #{visit[:encounter_datetime]}"
             return nil
@@ -226,7 +227,8 @@ module Transformers
             {
               concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
               obs_datetime: visit[:encounter_datetime],
-              value_coded: disease_concept_id
+              value_coded: disease_concept_id,
+              comments: "Transformed from eMastercard's #{disease}"
             }
           end
         end

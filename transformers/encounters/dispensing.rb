@@ -16,7 +16,8 @@ module Transformers
 
             if order[:drug_order][:equivalent_daily_dose]&.positive?
               daily_dose = amount_dispensed / order[:drug_order][:equivalent_daily_dose]
-              order[:auto_expire_date] = order[:start_date] + daily_dose
+              # Cast to datetime to enable date arithmetic
+              order[:auto_expire_date] = order[:start_date].to_datetime + daily_dose
             end
 
             order[:drug_order][:quantity] = amount_dispensed
