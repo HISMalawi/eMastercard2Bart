@@ -61,7 +61,7 @@ module Transformers
           Transformers::Encounters::Treatment.guess_prescribed_arvs({ errors: [] },
                                                                     visit[:art_regimen],
                                                                     visit[:weight],
-                                                                    visit[:encounter_datedate])
+                                                                    visit[:encounter_datetime])
         end
 
         # Retrieve ARV pill count for patient on a given visit
