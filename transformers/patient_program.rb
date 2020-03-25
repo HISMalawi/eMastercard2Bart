@@ -1,10 +1,10 @@
-# frozen_string_literal: true
 
+# frozen_string_literal: true
 module Transformers
   module PatientProgram
     def self.transform(patient, visits)
       outcomes = find_patient_outcomes(patient[:patient_id])
-      states = transform_outcomes_to_nart_states(outcomes)
+      states = transform_outcomes_to_nart_states(patient, outcomes)
       date_enrolled = visits.first&.[](:encounter_datetime) || states.first&.[](:start_date)
 
       {
@@ -14,10 +14,14 @@ module Transformers
       }
     end
 
-    def self.transform_outcomes_to_nart_states(outcomes)
+    def self.transform_outcomes_to_nart_states(patient, outcomes)
       outcomes.each_with_object([]) do |outcome, states|
         outcome_date, outcome_name = outcome
         state_id = outcome_name_to_nart_state_id(outcome_name)
+        unless state_id
+          patient[:errors] << "Invalid outcome '#{outcome_name}' on #{outcome_date}"
+          next
+        end
 
         if states.empty?
           states << { state: state_id, start_date: outcome_date, end_date: nil }
