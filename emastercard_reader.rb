@@ -11,6 +11,7 @@ module EmastercardReader
         loop do
           LOGGER.info("Reading eMastercard patients from offset #{offset}...")
           results = EmastercardDb.from_table[:patient]
+                                 .join(:person, person_id: :patient_id)
                                  .offset(offset)
                                  .limit(batch_size)
                                  .all

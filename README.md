@@ -78,5 +78,6 @@ $ ruby main.rb
 
 The command above starts the migration. When the migration is done or terminated it writes
 any errors met during processing of the records to `errors.yaml`. That file can be used to
-correct any problems in the data (errors logged in there include 'missing required vitals and drugs dispensed'). The same file is also used to continue the migration the next time the script is run.
+correct any problems in the data (errors logged in there include 'missing required vitals and drugs dispensed').
+The same file is also used to continue the migration the next time the script is run.
 If there is any need to restart the entire process then `errors.yml` must be removed.

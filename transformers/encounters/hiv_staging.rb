@@ -18,8 +18,8 @@ module Transformers
             *(visit[:gender]&.casecmp?('F') ? pregnant_or_breastfeeding(patient, visit) : [nil])
           ].reject(&:nil?)
 
-          if observations.empty?
-            observations = [unknown_reason_for_starting_art(patient, visit)]
+          unless observations.any? { |obs| is_reason_for_starting_set?(obs) }
+            observations << unknown_reason_for_starting_art(patient, visit)
           end
 
           {
@@ -138,6 +138,13 @@ module Transformers
           unless concept_id
             patient[:errors] << "Unknown who_stage 'stage' on #{visit[:encounter_datetime]}"
             return nil
+          end
+
+          if concept_id == Nart::Concepts::WHO_STAGE_2\
+              && (visit[:encounter_datetime].to_date - patient[:birthdate].to_date).to_i < 18
+            concept_id = Nart::Concepts::WHO_STAGE_2_PAEDS
+          else
+            concept_id = Nart::Concepts::WHO_STAGE_2_ADULTS
           end
 
           {
@@ -312,6 +319,10 @@ module Transformers
             value_coded: Nart::Concepts::UNKNOWN,
             comments: 'Patient had no reason for starting in eMastercard'
           }
+        end
+
+        def is_reason_for_starting_set?(obs)
+          obs[:concept_id] == Nart::Concepts::REASON_FOR_ART_ELIGIBILITY
         end
       end
     end
