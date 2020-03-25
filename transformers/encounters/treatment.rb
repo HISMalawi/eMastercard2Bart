@@ -7,7 +7,15 @@ module Transformers
       class << self
         def transform(patient, visit)
           visit_date = visit[:encounter_datetime]
-          drugs = guess_prescribed_arvs(patient, visit[:art_regimen], visit[:weight], visit_date)
+          regimen = visit[:art_regimen]
+
+          if regimen && !regimen.strip.empty?
+            drugs = guess_prescribed_arvs(patient, regimen, visit[:weight], visit_date)
+            observations = [{concept_id: Nart::Concepts::ARV_REGIMEN, obs_datetime: visit_date, value_text: regimen}]
+          else
+            drugs = []
+            observations = []
+          end
 
           if visit[:cpt_ipt_given_options]&.casecmp?('Yes')
             drugs = drugs.dup
@@ -17,6 +25,7 @@ module Transformers
           {
             encounter_type_id: Nart::Encounters::TREATMENT,
             encounter_datetime: visit[:encounter_datetime],
+            observations: observations,
             orders: drugs.map do |drug_id|
               dose = find_arv_dose(drug_id, visit[:weight])
 
