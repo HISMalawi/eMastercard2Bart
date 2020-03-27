@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'sequel'
+
 module EmastercardReader
   class << self
     # Reads all patients from the database and returns an Enumerator.
@@ -14,6 +16,7 @@ module EmastercardReader
                                  .join(:person, person_id: :patient_id)
                                  .offset(offset)
                                  .limit(batch_size)
+                                 .select(Sequel.lit('patient.*, birthdate'))
                                  .all
           break if results.size.zero?
 

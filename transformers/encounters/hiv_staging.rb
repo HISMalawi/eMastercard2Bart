@@ -18,7 +18,7 @@ module Transformers
             *(visit[:gender]&.casecmp?('F') ? pregnant_or_breastfeeding(patient, visit) : [nil])
           ].reject(&:nil?)
 
-          unless observations.any? { |obs| is_reason_for_starting_set?(obs) }
+          unless observations.any? { |obs| reason_for_starting_set?(obs) }
             observations << unknown_reason_for_starting_art(patient, visit)
           end
 
@@ -140,11 +140,16 @@ module Transformers
             return nil
           end
 
-          if concept_id == Nart::Concepts::WHO_STAGE_2\
-              && (visit[:encounter_datetime].to_date - patient[:birthdate].to_date).to_i < 18
-            concept_id = Nart::Concepts::WHO_STAGE_2_PAEDS
-          else
-            concept_id = Nart::Concepts::WHO_STAGE_2_ADULTS
+          if concept_id == Nart::Concepts::WHO_STAGE_2
+            birthdate = patient[:birthdate]
+
+            if birthdate.nil?
+              concept_id = Nart::Concepts::WHO_STAGE_2
+            elsif (visit[:encounter_datetime].to_date - birthdate.to_date).to_i < 14
+              concept_id = Nart::Concepts::WHO_STAGE_2_PAEDS
+            else
+              concept_id = Nart::Concepts::WHO_STAGE_2_ADULTS
+            end
           end
 
           {
@@ -164,9 +169,10 @@ module Transformers
           return nil unless observation&.[](:value_text)&.casecmp?('Y')
 
           {
-            concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
+            concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
             obs_datetime: visit[:encounter_datetime],
-            value_coded: Nart::Concepts::KAPOSIS_SARCOMA
+            value_coded: Nart::Concepts::KAPOSIS_SARCOMA,
+            comments: "Transformed from eMastercard's KS"
           }
         end
 
@@ -321,7 +327,7 @@ module Transformers
           }
         end
 
-        def is_reason_for_starting_set?(obs)
+        def reason_for_starting_set?(obs)
           obs[:concept_id] == Nart::Concepts::REASON_FOR_ART_ELIGIBILITY
         end
       end
