@@ -64,6 +64,14 @@ begin
 
   patients = EmastercardReader.read_patients(from: total_patients)
 
+  site_prefix = NartDb.from_table[:global_property]
+                      .where(property: 'site_prefix')
+                      .first
+  unless site_prefix
+    NartDb.into_table[:global_property]
+          .insert(uuid: SecureRandom.uuid, property: 'site_prefix', property_value: SITE_PREFIX)
+  end
+
   Parallel.each(patients, in_threads: 8) do |patient|
     patient[:errors] = [] # For logging transformation errors
     nart_patient = Transformers::Patient.transform(patient)
