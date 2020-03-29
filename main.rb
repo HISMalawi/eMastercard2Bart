@@ -88,7 +88,9 @@ ensure
   print "----- Total patients processed: #{total_patients}\n"
   print "----- Total patients with errors: #{errors.size}\n"
 
-  File.open('errors.yaml', 'w') do |fout|
+  FileUtils.mkdir('tmp') unless File.exist?('tmp')
+
+  File.open('tmp/errors.yaml', 'w') do |fout|
     fout.write("total_patients_processed: #{total_patients}\n")
     fout.write("total_patients_with_errors: #{errors.size}\n")
     fout.write(YAML.dump(errors))

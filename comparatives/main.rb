@@ -36,7 +36,9 @@ LOGGER = Logger.new(STDOUT)
 LOGGER.level = Logger::DEBUG
 
 def main
-  CSV.open('stats.csv', 'wb') do |csv|
+  FileUtils.mkdir('tmp') unless File.exist?('tmp')
+
+  CSV.open('tmp/stats.csv', 'wb') do |csv|
     csv << ['Indicator', 'ARV Number', 'date', 'eMastercard', 'NART']
 
     matches = 0
