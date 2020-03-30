@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative '../config'
 require_relative '../databases'
 require_relative './nart'
 require_relative './emastercard'
@@ -35,10 +36,16 @@ INDICATORS = %w[
 LOGGER = Logger.new(STDOUT)
 LOGGER.level = Logger::DEBUG
 
+SITE_PREFIX = config['site_prefix']
+
+def report_file(stat_type)
+  "tmp/#{SITE_PREFIX.downcase}-migration-#{stat_type}.csv"
+end
+
 def main
   FileUtils.mkdir('tmp') unless File.exist?('tmp')
 
-  CSV.open('tmp/stats.csv', 'wb') do |csv|
+  CSV.open(report_file('adverse-outcomes'), 'wb') do |csv|
     csv << ['Indicator', 'ARV Number', 'date', 'eMastercard', 'NART']
 
     matches = 0
