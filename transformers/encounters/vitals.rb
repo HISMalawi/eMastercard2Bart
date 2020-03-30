@@ -18,44 +18,122 @@ module Transformers
           }
         end
 
-        VITALS_CONCEPT_MAP = {
-          height: Nart::Concepts::HEIGHT,
-          weight: Nart::Concepts::WEIGHT
-        }.freeze
-
         def collect_initial_visit_vitals(patient, visit)
-          VITALS_CONCEPT_MAP.each_with_object([]) do |name__concept_id, vitals|
-            name, concept_id = name__concept_id
-            if visit[name]
-              vitals << {
-                concept_id: concept_id, obs_datetime: visit[:encounter_datetime], value_numeric: visit[name]
-              }
-            elsif name == :weight
-              patient[:errors] << "Missing weight on initial visit #{visit[:encounter_datetime]}"
-            else
-              LOGGER.warn("Missing height on visit #{visit[:encounter_datetime]}")
-            end
+          vitals = []
+
+          height = find_initial_patient_height(patient, visit[:encounter_datetime])
+          if height
+            vitals << height
+          else
+            patient[:errors] << "Missing height on initial visit #{visit[:encounter_datetime]}"
           end
+
+          weight = find_initial_patient_weight(patient, visit[:encounter_datetime])
+          if weight
+            vitals << weight
+          else
+            patient[:errors] << "Missing weight on initial visit #{visit[:encounter_datetime]}"
+          end
+
+          vitals
         end
 
         def collect_regular_visit_vitals(patient, visit, person)
-          if person[:birthdate].nil? || person_age(person[:birthdate]) < 18
-            return collect_initial_visit_vitals(patient, visit)
-          end
+          vitals = []
 
-          if visit[:weight]
-            # For adults weight only is collected
-            [
-              {
-                concept_id: Nart::Concepts::WEIGHT,
-                obs_datetime: visit[:encounter_datetime],
-                value_numeric: visit[:weight]
-              }
-            ]
+          weight = find_patient_weight(patient, visit[:encounter_datetime])
+          if weight
+            vitals << weight
           else
             patient[:errors] << "Missing weight on visit #{visit[:encounter_datetime]}"
-            []
           end
+
+          if person[:birthdate] && person_age(person[:birthdate]) > 18
+            height = find_patient_height(patient, visit[:encounter_datetime])
+            if height
+              vitals << height
+            else
+              patient[:errors] << "Missing height on visit #{visit[:encounter_datetime]}"
+            end
+          end
+
+          vitals
+        end
+
+        def find_patient_height(patient, date)
+          height = EmastercardDb.from_table[:obs]
+                                .join(:encounter, encounter_id: :encounter_id) 
+                                .where(concept_id: [Emastercard::Concepts::HEIGHT1, Emastercard::Concepts::HEIGHT2],
+                                       Sequel[:encounter][:encounter_datetime] => date,
+                                       person_id: patient[:patient_id])
+                                .exclude(value_numeric: nil)
+                                .first
+                                &.[](:value_numeric)
+
+          return nil unless height
+
+          {
+            concept_id: Nart::Concepts::HEIGHT,
+            obs_datetime: date,
+            value_numeric: height
+          }
+        end
+
+        def find_initial_patient_height(patient, date)
+          height = EmastercardDb.from_table[:obs]
+                                .join(:encounter, encounter_id: :encounter_id) 
+                                .where(concept_id: [Emastercard::Concepts::HEIGHT1, Emastercard::Concepts::HEIGHT2],
+                                       person_id: patient[:patient_id],
+                                       Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_STATUS_AT_INITIATION)
+                                .exclude(value_numeric: nil)
+                                .first
+                                &.[](:value_numeric)
+
+          return nil unless height
+
+          {
+            concept_id: Nart::Concepts::HEIGHT,
+            obs_datetime: date,
+            value_numeric: height
+          }
+        end
+
+        def find_patient_weight(patient, date)
+          weight = EmastercardDb.from_table[:obs]
+                                .join(:encounter, encounter_id: :encounter_id)
+                                .where(concept_id: [Emastercard::Concepts::WEIGHT1, Emastercard::Concepts::WEIGHT2],
+                                       Sequel[:encounter][:encounter_datetime] => date,
+                                       person_id: patient[:patient_id])
+                                .exclude(value_numeric: nil)
+                                .first
+                                &.[](:value_numeric)
+
+          return nil unless weight
+
+          {
+            concept_id: Nart::Concepts::WEIGHT,
+            obs_datetime: date,
+            value_numeric: weight
+          }
+        end
+
+        def find_initial_patient_weight(patient, date)
+          weight = EmastercardDb.from_table[:obs]
+                                .join(:encounter, encounter_id: :encounter_id)
+                                .where(concept_id: [Emastercard::Concepts::WEIGHT1, Emastercard::Concepts::WEIGHT2],
+                                       Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_STATUS_AT_INITIATION,
+                                       person_id: patient[:patient_id])
+                                .exclude(value_numeric: nil)
+                                .first
+                                &.[](:value_numeric)
+
+          return nil unless weight
+
+          {
+            concept_id: Nart::Concepts::WEIGHT,
+            obs_datetime: date,
+            value_numeric: weight
+          }
         end
 
         def person_age(birthdate)

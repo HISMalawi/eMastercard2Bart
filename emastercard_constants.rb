@@ -20,6 +20,8 @@ module Emastercard
     PILL_COUNT = 37
     PREGNANT_OR_BREASTFEEDING = 11
     WHO_STAGE = 3
+    WEIGHT1 = 7
+    WEIGHT2 = 33
   end
 
   module Encounters
