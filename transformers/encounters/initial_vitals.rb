@@ -2,46 +2,26 @@
 
 module Transformers
   module Encounters
-    module Vitals
+    module InitialVitals
       class << self
-        def transform(patient, visit, person)
-          vitals = vitals(patient, visit, person)
+        def transform(patient, clinic_registration_encounter)
+          art_start_date = find_art_start_date(clinic_registration_encounter)
+
+          observations = [height(patient, art_start_date), weight(patient, art_start_date)]
 
           {
             encounter_type_id: Nart::Encounters::VITALS,
-            encounter_datetime: visit[:encounter_datetime],
-            observations: vitals.reject(&:nil?)
+            encounter_datetime: art_start_date,
+            observations: observations.reject(&:nil?)
           }
-        end
-
-        def vitals(patient, visit, person)
-          vitals = []
-
-          weight = weight(patient, visit[:encounter_datetime])
-          if weight
-            vitals << weight
-          else
-            patient[:errors] << "Missing weight on visit #{visit[:encounter_datetime]}"
-          end
-
-          if person[:birthdate] && person_age(person[:birthdate]) > 18
-            height = height(patient, visit[:encounter_datetime])
-            if height
-              vitals << height
-            else
-              patient[:errors] << "Missing height on visit #{visit[:encounter_datetime]}"
-            end
-          end
-
-          vitals
         end
 
         def height(patient, date)
           height = EmastercardDb.from_table[:obs]
                                 .join(:encounter, encounter_id: :encounter_id) 
                                 .where(concept_id: [Emastercard::Concepts::HEIGHT1, Emastercard::Concepts::HEIGHT2],
-                                       Sequel[:encounter][:encounter_datetime] => date,
-                                       person_id: patient[:patient_id])
+                                       person_id: patient[:patient_id],
+                                       Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_STATUS_AT_INITIATION)
                                 .exclude(value_numeric: nil)
                                 .first
                                 &.[](:value_numeric)
@@ -59,7 +39,7 @@ module Transformers
           weight = EmastercardDb.from_table[:obs]
                                 .join(:encounter, encounter_id: :encounter_id)
                                 .where(concept_id: [Emastercard::Concepts::WEIGHT1, Emastercard::Concepts::WEIGHT2],
-                                       Sequel[:encounter][:encounter_datetime] => date,
+                                       Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_STATUS_AT_INITIATION,
                                        person_id: patient[:patient_id])
                                 .exclude(value_numeric: nil)
                                 .first
@@ -74,8 +54,14 @@ module Transformers
           }
         end
 
-        def person_age(birthdate)
-          (Date.today - birthdate.to_date).to_i
+        def find_art_start_date(clinic_registration_encounter)
+          clinic_registration_encounter[:observations].each do |observation|
+            if observation[:concept_id] == Nart::Concepts::DATE_ANTIRETROVIRALS_STARTED
+              return observation[:value_datetime]
+            end
+          end
+
+          clinic_registration_encounter[:encounter_datetime]
         end
       end
     end

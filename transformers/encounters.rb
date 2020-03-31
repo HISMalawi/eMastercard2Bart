@@ -8,6 +8,7 @@ require_relative 'encounters/hiv_clinic_registration'
 require_relative 'encounters/hiv_staging'
 require_relative 'encounters/hiv_reception'
 require_relative 'encounters/art_adherence'
+require_relative 'encounters/initial_vitals'
 require_relative 'encounters/vitals'
 require_relative 'encounters/hiv_clinic_consultation'
 require_relative 'encounters/treatment'
@@ -17,25 +18,29 @@ require_relative 'encounters/appointment'
 module Transformers
   module Encounters
     def self.transform(patient, visits, previous_visit = nil, person)
-      return [] if visits.empty?
+      # if no visits and no previous visit then patient has no
+      # visits but still need to try to pull out staging info
+      # and initial vitals (ie from transfer-in).
+      return [] if visits.empty? && previous_visit
 
       visit = visits.first
       encounters = []
 
-      is_initial_visit = previous_visit.nil?
-
-      if is_initial_visit
+      if previous_visit.nil? # Initial visit?
         encounters << Encounters::Registration.transform(patient, visit)
-        encounters << Encounters::HivClinicRegistration.transform(patient, visit)
-        encounters << Encounters::HivStaging.transform(patient, visit)
+        encounters << Encounters::HivClinicRegistration.transform(patient, encounters[0])
+        encounters << Encounters::HivStaging.transform(patient, encounters[0])
+        encounters << Encounters::InitialVitals.transform(patient, encounters[1])
       else
         # These never happen on an initial visit
         encounters << Encounters::ArtAdherence.transform(patient, visit, previous_visit)
       end
 
+      return encounters unless visit
+
       # Append encounters that occur on every visit
       encounters << Encounters::HivReception.transform(patient, visit)
-      encounters << Encounters::Vitals.transform(patient, visit, is_initial_visit, person)
+      encounters << Encounters::Vitals.transform(patient, visit, person)
       encounters << Encounters::HivClinicConsultation.transform(patient, visit)
       # encounters << hiv_clinic_consultation_clinician(patient, visit_date)
       encounters << Encounters::Treatment.transform(patient, visit)
