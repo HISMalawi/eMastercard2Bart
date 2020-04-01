@@ -12,6 +12,7 @@ module Emastercard
     CLINICAL_REGISTRATION_ART_INITIATION_AGE_TYPE = 59
     CONFIRMATORY_HIV_TEST = 17
     CPT_DISPENSED = 43
+    EVENT_TYPE = 32
     EVER_TAKEN_ARVS = 12
     HEIGHT1 = 6 # eMastercard has 2 separate concepts for Height
     HEIGHT2 = 51
