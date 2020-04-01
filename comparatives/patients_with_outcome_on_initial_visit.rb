@@ -19,9 +19,12 @@ def patients_with_an_outcome
 end
 
 def patient_first_visit(patient_id)
-  emastercard_db[:encounter].where(patient_id: patient_id,
+  emastercard_db[:encounter].join(:obs, encounter_id: :encounter_id)
+                            .where(patient_id: patient_id,
                                    encounter_type: Emastercard::Encounters::ART_VISIT)
+                            .exclude(value_text: nil, value_numeric: nil, value_datetime: nil)
                             .order(:encounter_datetime)
+                            .group(:encounter_datetime)
                             .select(:encounter_datetime)
                             .get(:encounter_datetime)
 end
@@ -51,9 +54,10 @@ SITE_PREFIX = config['site_prefix'].downcase
 def main
   CSV.open("tmp/#{SITE_PREFIX}-patients-with-outcome-on-first-visit.csv", 'wb') do |csv|
     csv << ['ARV Number', 'Patient Name', 'Outcome', 'Outcome Date']
-    patients_with_an_outcome_on_first_visit.each do |patient|
-      csv << patient[1..-1]
-    end
+
+    patients_with_an_outcome_on_first_visit
+      .sort_by { |patient| patient[1] }
+      .each { |patient| csv << patient[1..-1] }
   end
 end
 
