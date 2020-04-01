@@ -17,7 +17,12 @@ module Transformers
         end
 
         def side_effects(patient, visit)
-          unless visit[:'side effects']
+          side_effects_present = case visit[:'side effects']&.upcase
+                                 when 'Y' then Nart::Concepts::YES
+                                 when 'N' then Nart::Concepts::NO
+                                 end
+
+          unless side_effects_present
             patient[:errors] << "Missing side effects on #{visit[:encounter_datetime]}"
             return nil
           end
@@ -30,10 +35,7 @@ module Transformers
               {
                 concept_id: Nart::Concepts::UNKNOWN,
                 obs_datetime: visit[:encounter_datetime],
-                value_coded: case visit[:'side effects'].upcase
-                             when 'Y' then Nart::Concepts::YES
-                             when 'N' then Nart::Concepts::NO
-                             end,
+                value_coded: side_effects_present,
                 comments: 'Migrated from eMastercard 1.0'
               }
             ]
