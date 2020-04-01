@@ -77,45 +77,6 @@ def save_errors(total_patients, patients_with_errors)
   end
 end
 
-MISSING_VISITS_REPORT_FILE = "tmp/#{SITE_PREFIX.downcase}-migration-missing-visits.csv"
-
-def patients_missing_visits_on_last_run
-  if total_patients_read_on_last_run.zero? || !File.exist?(MISSING_VISITS_REPORT_FILE)
-    return []
-  end
-
-  CSV.read(MISSING_VISITS_REPORT_FILE).map(&:first)
-end
-
-def save_missing_visits_report(arv_numbers)
-  CSV.open(MISSING_VISITS_REPORT_FILE, 'wb') do |csv|
-    arv_numbers.each do |number|
-      csv << [number]
-    end
-  end
-end
-
-NON_VISIT_ENCOUNTERS = [
-  # In eMastercard the information collected in these encounters
-  # does not constitute a visit.
-  Nart::Encounters::HIV_CLINIC_REGISTRATION,
-  Nart::Encounters::HIV_STAGING
-].freeze
-
-def patient_missing_emastercard_visits?(nart_patient)
-  encounters = nart_patient[:encounters]
-
-  return false unless encounters
-
-  encounters.each do |encounter|
-    unless NON_VISIT_ENCOUNTERS.include?(encounter[:encounter_type])
-      return false
-    end
-  end
-
-  true
-end
-
 def save_site_prefix
   site_prefix = NartDb.from_table[:global_property]
                       .where(property: 'site_prefix')
@@ -129,7 +90,6 @@ end
 begin
   errors = errors_on_last_run
   total_patients = total_patients_read_on_last_run
-  patients_missing_visits = patients_missing_visits_on_last_run
   lock = Mutex.new
 
   save_site_prefix
@@ -141,10 +101,6 @@ begin
     unless patient[:errors].empty?
       lock.synchronize do
         errors[nart_patient_tag(nart_patient)] = patient[:errors]
-
-        if patient_missing_emastercard_visits?(nart_patient)
-          patients_missing_visits << nart_patient_tag(nart_patient)
-        end
       end
     end
 
@@ -160,5 +116,4 @@ begin
   end
 ensure
   save_errors(total_patients, errors)
-  save_missing_visits_report(patients_missing_visits)
 end
