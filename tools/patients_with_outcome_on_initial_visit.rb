@@ -13,7 +13,7 @@ def patients_with_an_outcome
                       .where(encounter_type: Emastercard::Encounters::ART_VISIT,
                              concept_id: Emastercard::Concepts::OUTCOME)
                       .exclude(value_text: nil)
-                      .group(Sequel[:encounter][:patient_id])
+                      .group(Sequel[:encounter][:patient_id], :identifier, :name)
                       .select(Sequel.lit('encounter.patient_id, identifier, CONCAT(given_name, " ", family_name) AS name'))
                       .map(%i[patient_id identifier name])
 end
