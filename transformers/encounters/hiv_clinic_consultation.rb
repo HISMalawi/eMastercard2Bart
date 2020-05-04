@@ -61,7 +61,7 @@ module Transformers
         end
 
         def viral_load(_patient, visit)
-          return nil unless visit[:viral_load_result] && visit[:viral_load_result_symbol]
+          return nil unless visit[:viral_load_result]
 
           {
             order_type_id: Nart::Orders::LAB,
@@ -72,7 +72,7 @@ module Transformers
               concept_id: Nart::Concepts::VIRAL_LOAD,
               obs_datetime: visit[:encounter_datetime],
               value_numeric: visit[:viral_load_result],
-              value_text: visit[:viral_load_result_symbol]
+              value_text: visit[:viral_load_result_symbol] || '='
             }
           }
         end
