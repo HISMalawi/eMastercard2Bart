@@ -91,6 +91,13 @@ def create_dispensation_encounter(date)
   }
 end
 
+def patient_date_enrolled(patient_id)
+  nart_db[:obs].where(patient_id: patient_id, concept_id: Nart::Concepts::DATE_ANTIRETROVIRALS_STARTED)
+               .select(:obs_datetime)
+               .first
+               &.[](:obs_datetime)
+end
+
 def mark_patient_as_on_treatment(patient_program_id, date)
   state = { state: Nart::PatientStates::ON_TREATMENT, start_date: date, end_date: date }  
   Loaders::Patient.load_patient_states(patient_program_id, [state])
@@ -104,11 +111,14 @@ def main
     Parallel.each(patients, in_threads: 4) do |patient|
       # TODO: Dump patients to a CSV possibly...
       patient_id = patient[:patient_id]
-      date = patient[:start_date]
+      # date = patient[:start_date]
       patient_program_id = patient[:patient_program_id]
 
-      create_dispensation(patient_id, date)
-      mark_patient_as_on_treatment(patient_program_id, date)
+      date_enrolled = patient_date_enrolled(patient_id)
+      next unless date_enrolled
+
+      create_dispensation(patient_id, date_enrolled)
+      mark_patient_as_on_treatment(patient_program_id, date_enrolled)
     end
   end
 end
