@@ -18,8 +18,8 @@ end
 
 def all_nart_patients
   nart_db[:patient].join(:person_name, person_id: :patient_id)
-                   .left_join(:patient_identifier, patient_id: :person_id)
-                   .where(identifier_type: Nart::PatientIdentifierTypes::ARV_NUMBER)
+                   .left_join(:patient_identifier, patient_id: :person_id,
+                                                   identifier_type: Nart::PatientIdentifierTypes::ARV_NUMBER)
                    .order(:identifier)
                    .select(Sequel.lit('identifier, CONCAT(given_name, " ", family_name) AS name'))
                    .map(%i[identifier name])
