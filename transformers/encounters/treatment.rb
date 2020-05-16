@@ -100,7 +100,7 @@ module Transformers
             patient[:errors] << "Missing art_regimen on #{date}"
             return []
           elsif regimen_name.casecmp?('Other')
-            return [nil]
+            return [Nart::Drugs::UNKNOWN_ARV]
           end
 
           regimen_index, _regimen_category = split_regimen_name(regimen_name)
