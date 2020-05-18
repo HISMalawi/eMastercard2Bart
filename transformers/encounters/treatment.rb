@@ -5,29 +5,24 @@ module Transformers
   module Encounters
     module Treatment
       class << self
-        def transform(patient, visit)
-          visit_date = visit[:encounter_datetime]
-          regimen = visit[:art_regimen]
+        def transform(patient, visit = nil)
+          regimen, drugs, visit_date = visit ? find_regimen(patient, visit) : find_initial_regimen(patient)
 
-          if regimen && !regimen.strip.empty?
-            drugs = guess_prescribed_arvs(patient, regimen, visit[:weight], visit_date)
-            observations = [{concept_id: Nart::Concepts::ARV_REGIMEN, obs_datetime: visit_date, value_text: regimen}]
-          else
-            drugs = []
-            observations = []
-          end
+          observations = []
 
-          if visit[:cpt_ipt_given_options]&.casecmp?('Yes')
-            drugs = drugs.dup
-            drugs << guess_prescribed_cpt(visit[:weight])
+          if regimen
+            observations << {
+              concept_id: Nart::Concepts::ARV_REGIMEN,
+              obs_datetime: visit_date, value_text: regimen
+            }
           end
 
           {
             encounter_type_id: Nart::Encounters::TREATMENT,
-            encounter_datetime: visit[:encounter_datetime],
+            encounter_datetime: visit_date,
             observations: observations,
             orders: drugs.map do |drug_id|
-              dose = find_arv_dose(drug_id, visit[:weight])
+              dose = find_arv_dose(drug_id, visit&.[](:weight))
 
               {
                 order_type_id: Nart::Orders::DRUG_ORDER,
@@ -41,6 +36,53 @@ module Transformers
               }
             end
           }
+        end
+
+        def find_regimen(patient, visit)
+          regimen = visit[:art_regimen]&.strip
+          visit_date = visit[:encounter_datetime]
+          drugs = regimen ? guess_prescribed_arvs(patient, regimen, visit[:weight], visit_date) : []
+
+          if visit[:cpt_ipt_given_options]&.casecmp?('Yes')
+            drugs = [*drugs, guess_prescribed_cpt(visit[:weight])]
+          end
+
+          [regimen, drugs, visit_date]
+        end
+
+        def find_initial_regimen(patient)
+          regimen = patient_initial_art_regimen(patient[:patient_id])
+          regimen_date = patient_initial_art_regimen_date(patient[:patient_id])
+
+          return [nil, [], nil] unless regimen && regimen_date
+ 
+          drugs = guess_prescribed_arvs(patient, regimen, nil, regimen_date)
+
+          [regimen, drugs, regimen_date]
+        end
+
+        def patient_initial_art_regimen(patient_id)
+          EmastercardDb.from_table[:obs]
+                       .join(:encounter, encounter_id: :encounter_id)
+                       .where(concept_id: Emastercard::Concepts::INITIAL_ART_REGIMEN,
+                              patient_id: patient_id,
+                              Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_CONFIRMATORY_TEST)
+                       .exclude(value_text: nil)
+                       .select(:value_text)
+                       .first
+                       &.[](:value_text)
+        end
+
+        def patient_initial_art_regimen_date(patient_id)
+          EmastercardDb.from_table[:obs]
+                       .join(:encounter, encounter_id: :encounter_id)
+                       .where(concept_id: Emastercard::Concepts::INITIAL_ART_REGIMEN_START_DATE,
+                              patient_id: patient_id,
+                              Sequel[:encounter][:encounter_type] => Emastercard::Encounters::ART_CONFIRMATORY_TEST)
+                       .exclude(value_datetime: nil)
+                       .select(:value_datetime)
+                       .first
+                       &.[](:value_datetime)
         end
 
         def find_arv_dose(drug_id, weight)

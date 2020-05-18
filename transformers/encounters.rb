@@ -18,19 +18,25 @@ require_relative 'encounters/appointment'
 module Transformers
   module Encounters
     def self.transform(patient, visits, previous_visit = nil, person)
+      is_initial_visit = -> { previous_visit.nil? }
+
       # if no visits and no previous visit then patient has no
-      # visits but still need to try to pull out staging info
+      # visits but we still need to try to pull out staging info
       # and initial vitals (ie from transfer-in).
       return [] if visits.empty? && previous_visit
 
       visit = visits.first
       encounters = []
 
-      if previous_visit.nil? # Initial visit?
-        encounters << Encounters::Registration.transform(patient, visit)
-        encounters << Encounters::HivClinicRegistration.transform(patient, encounters[0])
-        encounters << Encounters::HivStaging.transform(patient, encounters[0])
-        encounters << Encounters::InitialVitals.transform(patient, encounters[1])
+      if is_initial_visit.call
+        registration = Encounters::Registration.transform(patient, visit)
+        clinic_registration = Encounters::HivClinicRegistration.transform(patient, registration)
+
+        encounters << registration << clinic_registration
+        encounters << Encounters::HivStaging.transform(patient, registration)
+        encounters << Encounters::InitialVitals.transform(patient, clinic_registration)
+
+        encounters << Encounters::Treatment.transform(patient) unless visit
       else
         # These never happen on an initial visit
         encounters << Encounters::ArtAdherence.transform(patient, visit, previous_visit)
@@ -44,6 +50,7 @@ module Transformers
       encounters << Encounters::HivClinicConsultation.transform(patient, visit)
       # encounters << hiv_clinic_consultation_clinician(patient, visit_date)
       encounters << Encounters::Treatment.transform(patient, visit)
+
       encounters << Encounters::Dispensing.transform(patient, visit, encounters.last)
       encounters << Encounters::Appointment.transform(patient, visit)
 

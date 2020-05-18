@@ -17,6 +17,8 @@ module Emastercard
     HEIGHT1 = 6 # eMastercard has 2 separate concepts for Height
     HEIGHT2 = 51
     HIV_RELATED_DISEASES = 1
+    INITIAL_ART_REGIMEN = 22
+    INITIAL_ART_REGIMEN_START_DATE = 23
     INITIAL_TB_STATUS = 9
     KS = 10
     NEXT_APPOINTMENT_DATE = 47
