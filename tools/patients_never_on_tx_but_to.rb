@@ -92,7 +92,7 @@ def create_dispensation_encounter(date)
 end
 
 def patient_date_enrolled(patient_id)
-  nart_db[:obs].where(patient_id: patient_id, concept_id: Nart::Concepts::DATE_ANTIRETROVIRALS_STARTED)
+  nart_db[:obs].where(person_id: patient_id, concept_id: Nart::Concepts::DATE_ANTIRETROVIRALS_STARTED)
                .select(:obs_datetime)
                .first
                &.[](:obs_datetime)
