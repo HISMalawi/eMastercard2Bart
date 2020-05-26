@@ -7,7 +7,7 @@ module Transformers
         def transform(patient, current_visit, previous_visit)
           {
             encounter_type_id: Nart::Encounters::ART_ADHERENCE,
-            encounter_datetime: current_visit[:encounter_datetime],
+            encounter_datetime: retro_date(current_visit[:encounter_datetime]),
             observations: art_adherence(patient, previous_visit, current_visit).reject(&:nil?)
           }
         end
@@ -45,10 +45,10 @@ module Transformers
 
             {
               concept_id: Nart::Concepts::DRUG_ORDER_ADHERENCE,
-              obs_datetime: current_visit[:encounter_datetime],
+              obs_datetime: retro_date(current_visit[:encounter_datetime]),
               drug_order: {
                 drug_id: drug_id,
-                start_date: previous_visit[:encounter_datetime]
+                start_date: retro_date(previous_visit[:encounter_datetime])
               },
               value_numeric: adherence_rate
             }

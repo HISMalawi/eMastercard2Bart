@@ -24,7 +24,7 @@ module Transformers
 
             {
               concept_id: Nart::Concepts::AMOUNT_DISPENSED,
-              obs_datetime: visit[:encounter_datetime],
+              obs_datetime: retro_date(visit[:encounter_datetime]),
               value_drug: drug_id,
               value_numeric: amount_dispensed
             }
@@ -32,7 +32,7 @@ module Transformers
 
           {
             encounter_type_id: Nart::Encounters::DISPENSING,
-            encounter_datetime: visit[:encounter_datetime],
+            encounter_datetime: retro_date(visit[:encounter_datetime]),
             observations: observations.reject(&:nil?)
           }
         end

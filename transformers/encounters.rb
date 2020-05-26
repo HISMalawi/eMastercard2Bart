@@ -36,7 +36,7 @@ module Transformers
         encounters << Encounters::HivStaging.transform(patient, registration)
         encounters << Encounters::InitialVitals.transform(patient, clinic_registration)
 
-        encounters << Encounters::Treatment.transform(patient) unless visit
+        # encounters << Encounters::Treatment.transform(patient) unless visit
       else
         # These never happen on an initial visit
         encounters << Encounters::ArtAdherence.transform(patient, visit, previous_visit)

@@ -39,7 +39,7 @@ module Transformers
       when 'D' then Nart::PatientStates::DIED
       when 'TO' then Nart::PatientStates::TRANSFERRED_OUT
       when 'STOP' then Nart::PatientStates::TREATMENT_STOPPED
-      when 'DEF' then Nart::PatientStates::DEFAULTED
+      # when 'DEF' then Nart::PatientStates::DEFAULTED
       when 'OT' then Nart::PatientStates::ON_TREATMENT
       when 'PT' then Nart::PatientStates::PRE_ART
       end

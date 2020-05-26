@@ -8,11 +8,11 @@ module Transformers
 
         {
           encounter_type_id: Nart::Encounters::REGISTRATION,
-          encounter_datetime: registration_date,
+          encounter_datetime: retro_date(registration_date),
           observations: [
             {
               concept_id: Nart::Concepts::TYPE_OF_PATIENT,
-              obs_datetime: registration_date,
+              obs_datetime: retro_date(registration_date),
               value_coded: Nart::Concepts::NEW_PATIENT
             }
           ]

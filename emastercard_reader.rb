@@ -16,7 +16,7 @@ module EmastercardReader
                                  .join(:person, person_id: :patient_id)
                                  .offset(offset)
                                  .limit(batch_size)
-                                 .select(Sequel.lit('patient.*, birthdate'))
+                                 .select(Sequel.lit('patient.*, birthdate, gender'))
                                  .all
           break if results.size.zero?
 

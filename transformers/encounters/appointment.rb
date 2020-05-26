@@ -9,7 +9,7 @@ module Transformers
 
           {
             encounter_type_id: Nart::Encounters::APPOINTMENT,
-            encounter_datetime: visit[:encounter_datetime],
+            encounter_datetime: retro_date(visit[:encounter_datetime]),
             observations: observations.reject(&:nil?)
           }
         end
@@ -28,7 +28,7 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::NEXT_APPOINTMENT_DATE,
-            obs_datetime: visit[:encounter_datetime],
+            obs_datetime: retro_date(visit[:encounter_datetime]),
             value_datetime: observation[:value_datetime]
           }
         end

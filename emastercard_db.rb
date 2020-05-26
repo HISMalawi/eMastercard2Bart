@@ -44,8 +44,8 @@ module EmastercardDb
 
     def find_observation_by_encounter(person_id, concept_id, encounter_type_id)
       find_all_observations_by_encounter(person_id, concept_id, encounter_type_id)
-        .order(:encounter_datetime)
-        .last
+        .order('obs.date_created DESC')
+        .first
     end
   end
 

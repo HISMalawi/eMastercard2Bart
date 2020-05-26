@@ -13,13 +13,14 @@ module Transformers
           if regimen
             observations << {
               concept_id: Nart::Concepts::ARV_REGIMEN,
-              obs_datetime: visit_date, value_text: regimen
+              obs_datetime: retro_date(visit_date),
+              value_text: regimen
             }
           end
 
           {
             encounter_type_id: Nart::Encounters::TREATMENT,
-            encounter_datetime: visit_date,
+            encounter_datetime: retro_date(visit_date),
             observations: observations,
             orders: drugs.map do |drug_id|
               dose = find_arv_dose(drug_id, visit&.[](:weight))
@@ -27,7 +28,7 @@ module Transformers
               {
                 order_type_id: Nart::Orders::DRUG_ORDER,
                 concept_id: drug_concept_id(drug_id),
-                start_date: visit_date,
+                start_date: retro_date(visit_date),
                 auto_expire_date: nil, # Can this be safely estimated from  pills given?
                 drug_order: {
                   drug_inventory_id: drug_id,
@@ -55,7 +56,7 @@ module Transformers
           regimen_date = patient_initial_art_regimen_date(patient[:patient_id])
 
           return [nil, [], nil] unless regimen && regimen_date
- 
+
           drugs = guess_prescribed_arvs(patient, regimen, nil, regimen_date)
 
           [regimen, drugs, regimen_date]

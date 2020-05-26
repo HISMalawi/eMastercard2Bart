@@ -9,7 +9,7 @@ module Transformers
 
           {
             encounter_type_id: Nart::Encounters::VITALS,
-            encounter_datetime: visit[:encounter_datetime],
+            encounter_datetime: retro_date(visit[:encounter_datetime]),
             observations: vitals.reject(&:nil?)
           }
         end
@@ -50,7 +50,7 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::HEIGHT,
-            obs_datetime: date,
+            obs_datetime: retro_date(date),
             value_numeric: height
           }
         end
@@ -69,7 +69,7 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::WEIGHT,
-            obs_datetime: date,
+            obs_datetime: retro_date(date),
             value_numeric: weight
           }
         end

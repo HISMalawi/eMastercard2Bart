@@ -11,12 +11,12 @@ module Transformers
             observations: [
               {
                 concept_id: Nart::Concepts::PATIENT_PRESENT,
-                obs_datetime: visit[:encounter_datetime],
+                obs_datetime: retro_date(visit[:encounter_datetime]),
                 value_coded: visit[:arvs_given_to] != 'G' ? Nart::Concepts::YES : Nart::Concepts::NO
               },
               {
                 concept_id: Nart::Concepts::GUARDIAN_PRESENT,
-                obs_datetime: visit[:encounter_datetime],
+                obs_datetime: retro_date(visit[:encounter_datetime]),
                 value_coded: visit[:arvs_given_to] == 'G' ? Nart::Concepts::YES : Nart::Concepts::NO
               }
             ]

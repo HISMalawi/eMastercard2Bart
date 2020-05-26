@@ -87,6 +87,12 @@ def save_site_prefix
         .insert(uuid: SecureRandom.uuid, property: 'site_prefix', property_value: SITE_PREFIX)
 end
 
+def retro_date(date)
+  current_time = DateTime.now.strftime('%H:%M:%S.%L')
+  date = Date.strptime(date.to_s, '%Y-%m-%d') # Not sure if date is a string or a date
+  DateTime.strptime(date.strftime("%Y-%m-%d #{current_time}"), '%Y-%m-%d %H:%M:%S.%L')
+end
+
 begin
   errors = errors_on_last_run
   total_patients = total_patients_read_on_last_run
@@ -94,7 +100,7 @@ begin
 
   save_site_prefix
 
-  Parallel.each(EmastercardReader.read_patients(from: total_patients), in_threads: 8) do |patient|
+  Parallel.each(EmastercardReader.read_patients(from: total_patients), in_threads: 1) do |patient|
     patient[:errors] = [] # For logging transformation errors
     nart_patient = Transformers::Patient.transform(patient)
 

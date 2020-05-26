@@ -20,7 +20,7 @@ module Transformers
 
           {
             encounter_type_id: Nart::Encounters::HIV_CLINIC_REGISTRATION,
-            encounter_datetime: registration_encounter[:encounter_datetime],
+            encounter_datetime: retro_date(registration_encounter[:encounter_datetime]),
             observations: observations.reject(&:nil?)
           }
         end
@@ -41,7 +41,7 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::EVER_REGISTERED_AT_ART_CLINIC,
-            obs_datetime: registration_encounter[:encounter_datetime],
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
             value_coded: if ['reinitiation', 'transfer in'].include?(registration_type.downcase)
                            Nart::Concepts::YES
                          else
@@ -64,7 +64,7 @@ module Transformers
 
           {
             concept_id: Emastercard::Concepts::EVER_TAKEN_ARVS,
-            obs_datetime: registration_encounter[:encounter_datetime],
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
             value_coded: case ever_received_arts.upcase
                          when 'Y' then Nart::Concepts::YES
                          when 'N' then Nart::Concepts::NO
@@ -88,7 +88,7 @@ module Transformers
           if art_start_date && art_start_date[:value_datetime]
             return {
               concept_id: Nart::Concepts::DATE_ANTIRETROVIRALS_STARTED,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_datetime: art_start_date[:value_datetime]
             }
           elsif patient[:birthdate].nil?
@@ -133,7 +133,7 @@ module Transformers
           # Marching on to Valhalla
           {
             concept_id: Nart::Concepts::DATE_ANTIRETROVIRALS_STARTED,
-            obs_datetime: registration_encounter[:encounter_datetime],
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
             value_datetime: patient[:birthdate].to_date + age_in_days,
             comments: 'Estimated from eMastercard Clinical Registration ART Initiation Age'
           }
@@ -163,13 +163,13 @@ module Transformers
           when /PCR/i
             {
               concept_id: Nart::Concepts::CONFIRMATORY_HIV_TEST_TYPE,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_coded: Nart::Concepts::DNA_PCR
             }
           when /Rapid/i
             {
               concept_id: Nart::Concepts::CONFIRMATORY_HIV_TEST_TYPE,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_coded: Nart::Concepts::HIV_RAPID_TEST
             }
           else
@@ -181,7 +181,7 @@ module Transformers
         def has_transfer_letter(_patient, registration_encounter)
           {
             concept_id: Nart::Concepts::HAS_TRANSFER_LETTER,
-            obs_datetime: registration_encounter[:encounter_datetime],
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
             value_coded: Nart::Concepts::UNKNOWN
           }
         end

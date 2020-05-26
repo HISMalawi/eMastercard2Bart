@@ -10,7 +10,7 @@ module Transformers
 
           {
             encounter_type_id: Nart::Encounters::HIV_CLINIC_CONSULTATION,
-            encounter_datetime: visit[:encounter_datetime],
+            encounter_datetime: retro_date(visit[:encounter_datetime]),
             observations: observations.reject(&:nil?),
             orders: orders.reject(&:nil?)
           }
@@ -29,12 +29,12 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::ART_SIDE_EFFECTS,
-            obs_datetime: visit[:encounter_datetime],
+            obs_datetime: retro_date(visit[:encounter_datetime]),
             value_coded: Nart::Concepts::UNKNOWN,
             children: [
               {
                 concept_id: Nart::Concepts::UNKNOWN,
-                obs_datetime: visit[:encounter_datetime],
+                obs_datetime: retro_date(visit[:encounter_datetime]),
                 value_coded: side_effects_present,
                 comments: 'Migrated from eMastercard 1.0'
               }
@@ -50,7 +50,7 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::TB_STATUS,
-            obs_datetime: visit[:encounter_datetime],
+            obs_datetime: retro_date(visit[:encounter_datetime]),
             value_coded: case visit[:tb_tatus]
                          when 'Rx' then Nart::Concepts::ON_TB_TREATMENT
                          when 'Y' then Nart::Concepts::TB_SUSPECTED
@@ -66,11 +66,11 @@ module Transformers
           {
             order_type_id: Nart::Orders::LAB,
             concept_id: Nart::Concepts::VIRAL_LOAD,
-            start_date: visit[:encounter_datetime],
+            start_date: retro_date(visit[:encounter_datetime]),
             accession_number: "#{SITE_PREFIX}-#{next_accession_number}",
             observation: {
               concept_id: Nart::Concepts::VIRAL_LOAD,
-              obs_datetime: visit[:encounter_datetime],
+              obs_datetime: retro_date(visit[:encounter_datetime]),
               value_numeric: visit[:viral_load_result],
               value_text: visit[:viral_load_result_symbol] || '='
             }

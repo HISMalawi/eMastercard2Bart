@@ -11,11 +11,11 @@ module Transformers
         def transform(patient, registration_encounter)
           observations = [
             tb_status_at_initiation(patient, registration_encounter),
-            reason_for_art_eligibility(patient, registration_encounter),
+            *cd4_count(patient, registration_encounter),
             kaposis_sarcoma(patient, registration_encounter),
             *who_stages_criteria(patient, registration_encounter),
-            *cd4_count(patient, registration_encounter),
-            *(registration_encounter[:gender]&.casecmp?('F') ? pregnant_or_breastfeeding(patient, registration_encounter) : [nil])
+            reason_for_art_eligibility(patient, registration_encounter),
+            *pregnant_or_breastfeeding(patient, registration_encounter)
           ].reject(&:nil?)
 
           unless observations.any? { |obs| reason_for_starting_set?(obs) }
@@ -24,7 +24,7 @@ module Transformers
 
           {
             encounter_type_id: Nart::Encounters::HIV_STAGING,
-            encounter_datetime: registration_encounter[:encounter_datetime],
+            encounter_datetime: retro_date(registration_encounter[:encounter_datetime]),
             observations: observations
           }
         end
@@ -39,13 +39,13 @@ module Transformers
           when /Last 2(yrs|years)/i
             {
               concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_coded: Nart::Concepts::PTB_WITHIN_LAST_2_YEARS
             }
           when /Curr/i
             {
               concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_coded: Nart::Concepts::CURRENT_EPISODE_OF_TB
             }
           when /Never > 2years/i
@@ -62,55 +62,57 @@ module Transformers
                                               Emastercard::Concepts::PREGNANT_OR_BREASTFEEDING,
                                               Emastercard::Encounters::ART_STATUS_AT_INITIATION)
                             &.[](:value_text)
-          when /bf/i
+          when /Bf/i
             [
               {
                 concept_id: Nart::Concepts::BREAST_FEEDING,
-                obs_datetime: registration_encounter[:encounter_datetime],
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
                 value_coded: Nart::Concepts::YES
               },
               {
                 concept_id: Nart::Concepts::PATIENT_PREGNANT,
-                obs_datetime: registration_encounter[:encounter_datetime],
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
                 value_coded: Nart::Concepts::NO
               },
               {
                 concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
-                obs_datetime: registration_encounter[:encounter_datetime],
-                value_coded: Nart::Concepts::PATIENT_PREGNANT
-              }
-            ]
-          when /preg/i
-            [
-              {
-                concept_id: Nart::Concepts::PATIENT_PREGNANT,
-                obs_datetime: registration_encounter[:encounter_datetime],
-                value_coded: Nart::Concepts::YES
-              },
-              {
-                concept_id: Nart::Concepts::BREAST_FEEDING,
-                obs_datetime: registration_encounter[:encounter_datetime],
-                value_coded: Nart::Concepts::NO
-              },
-              {
-                concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
-                obs_datetime: registration_encounter[:encounter_datetime],
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
                 value_coded: Nart::Concepts::BREAST_FEEDING
               }
             ]
-          else
+          when /Preg/i
             [
               {
                 concept_id: Nart::Concepts::PATIENT_PREGNANT,
-                obs_datetime: registration_encounter[:encounter_datetime],
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
+                value_coded: Nart::Concepts::YES
+              },
+              {
+                concept_id: Nart::Concepts::BREAST_FEEDING,
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
+                value_coded: Nart::Concepts::NO
+              },
+              {
+                concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
+                value_coded: Nart::Concepts::PATIENT_PREGNANT
+              }
+            ]
+          when /N/i
+            [
+              {
+                concept_id: Nart::Concepts::PATIENT_PREGNANT,
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
                 value_coded: Nart::Concepts::NO
               },
               {
                 concept_id: Nart::Concepts::BREAST_FEEDING,
-                obs_datetime: registration_encounter[:encounter_datetime],
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
                 value_coded: Nart::Concepts::NO
               }
             ]
+          else
+            []
           end
         end
 
@@ -154,7 +156,7 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
-            obs_datetime: registration_encounter[:encounter_datetime],
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
             value_coded: concept_id
           }
         end
@@ -170,7 +172,7 @@ module Transformers
 
           {
             concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
-            obs_datetime: registration_encounter[:encounter_datetime],
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
             value_coded: Nart::Concepts::KAPOSIS_SARCOMA,
             comments: "Transformed from eMastercard's KS"
           }
@@ -237,9 +239,10 @@ module Transformers
           JSON.parse(diseases).map do |disease|
             disease = disease['value']
             disease_concept_id = WHO_STAGES_CRITERIA_MAP[disease] || Nart::Concepts::OTHER
+
             {
               concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_coded: disease_concept_id,
               comments: "Transformed from eMastercard's #{disease}"
             }
@@ -276,7 +279,7 @@ module Transformers
             if is_cd4_count_below_threshold && !is_reason_for_starting_set
               observations << {
                 concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
-                obs_datetime: registration_encounter[:encounter_datetime],
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
                 value_coded: threshold
               }
               is_reason_for_starting_set = false
@@ -284,7 +287,7 @@ module Transformers
 
             observations << {
               concept_id: threshold,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_coded: is_cd4_count_below_threshold ? Nart::Concepts::YES : Nart::Concepts::NO
             }
           end
@@ -297,12 +300,12 @@ module Transformers
           observations.append(
             {
               concept_id: Nart::Concepts::CD4_COUNT,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_numeric: cd4_value
             },
             {
               concept_id: Nart::Concepts::CD4_DATETIME,
-              obs_datetime: registration_encounter[:encounter_datetime],
+              obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_datetime: cd4_date&.[](:value_datetime),
               comments: cd4_date&.[](:value_datetime)&.nil? ? 'Not provided in emastercard' : nil
             }
@@ -321,9 +324,19 @@ module Transformers
         def unknown_reason_for_starting_art(_patient, registration_encounter)
           {
             concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
-            obs_datetime: registration_encounter[:encounter_datetime],
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
             value_coded: Nart::Concepts::UNKNOWN,
             comments: 'Patient had no reason for starting in eMastercard'
+          }
+        end
+
+        def asymptomatic(_patient, registration_encounter)
+          return nil unless @asymptomatic
+
+          {
+            concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
+            obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
+            value_coded: Nart::Concepts::ASYMPTOMATIC
           }
         end
 
