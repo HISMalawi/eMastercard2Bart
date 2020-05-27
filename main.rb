@@ -100,7 +100,7 @@ begin
 
   save_site_prefix
 
-  Parallel.each(EmastercardReader.read_patients(from: total_patients), in_threads: 1) do |patient|
+  Parallel.each(EmastercardReader.read_patients(from: total_patients), in_threads: 8) do |patient|
     patient[:errors] = [] # For logging transformation errors
     nart_patient = Transformers::Patient.transform(patient)
 
