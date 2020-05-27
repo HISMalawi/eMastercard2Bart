@@ -9,13 +9,15 @@ module Transformers
         include EmastercardDb
 
         def transform(patient, registration_encounter)
+          @reason_for_art_found = false
+
           observations = [
             tb_status_at_initiation(patient, registration_encounter),
-            *cd4_count(patient, registration_encounter),
             kaposis_sarcoma(patient, registration_encounter),
+            *pregnant_or_breastfeeding(patient, registration_encounter),
+            *cd4_count(patient, registration_encounter),
             *who_stages_criteria(patient, registration_encounter),
             reason_for_art_eligibility(patient, registration_encounter),
-            *pregnant_or_breastfeeding(patient, registration_encounter)
           ].reject(&:nil?)
 
           unless observations.any? { |obs| reason_for_starting_set?(obs) }
@@ -63,6 +65,7 @@ module Transformers
                                               Emastercard::Encounters::ART_STATUS_AT_INITIATION)
                             &.[](:value_text)
           when /Bf/i
+            @reason_for_art_found = true
             [
               {
                 concept_id: Nart::Concepts::BREAST_FEEDING,
@@ -81,6 +84,7 @@ module Transformers
               }
             ]
           when /Preg/i
+            @reason_for_art_found = true
             [
               {
                 concept_id: Nart::Concepts::PATIENT_PREGNANT,
@@ -125,6 +129,8 @@ module Transformers
         }.freeze
 
         def reason_for_art_eligibility(patient, registration_encounter)
+          return if @reason_for_art_found
+
           stage = EmastercardDb.find_observation(patient[:patient_id],
                                                  Emastercard::Concepts::WHO_STAGE,
                                                  Emastercard::Encounters::ART_STATUS_AT_INITIATION)
@@ -236,11 +242,20 @@ module Transformers
             return nil
           end
 
-          JSON.parse(diseases).map do |disease|
+          JSON.parse(diseases).each_with_object([]) do |disease, observations|
             disease = disease['value']
             disease_concept_id = WHO_STAGES_CRITERIA_MAP[disease] || Nart::Concepts::OTHER
 
-            {
+            if disease_concept_id == Nart::Concepts::ASYMPTOMATIC && !@reason_for_art_found
+              @reason_for_art_found = true
+              observations << {
+                concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
+                obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
+                value_coded: disease_concept_id
+              }
+            end
+
+            observations << {
               concept_id: Nart::Concepts::WHO_STAGES_CRITERIA,
               obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
               value_coded: disease_concept_id,
@@ -270,19 +285,19 @@ module Transformers
           observations = []
 
           # Capture CD4 level thresholds and save reason for starting if necessary.
-          is_reason_for_starting_set = false
 
           [Nart::Concepts::CD4_LE_250, Nart::Concepts::CD4_LE_350, Nart::Concepts::CD4_LE_500,
            Nart::Concepts::CD4_LE_750].each do |threshold|
             is_cd4_count_below_threshold = cd4_count_below_threshold?(cd4_value, threshold)
 
-            if is_cd4_count_below_threshold && !is_reason_for_starting_set
+            if is_cd4_count_below_threshold && !@reason_for_art_found
+              @reason_for_art_found = true
+
               observations << {
                 concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
                 obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
                 value_coded: threshold
               }
-              is_reason_for_starting_set = false
             end
 
             observations << {
