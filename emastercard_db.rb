@@ -56,8 +56,8 @@ module EmastercardDb
     LOGGER.debug('Loading eMastercard database configuration...')
     config = CONFIG['emastercard']
     engine = config['engine'] || 'mysql2'
-    username = config['username']
-    password = config['password']
+    username = CGI.escape(config['username'])
+    password = CGI.escape(config['password'])
     host = config['host'] || 'localhost'
     port = config['port'] || 3306
     database = config['database']

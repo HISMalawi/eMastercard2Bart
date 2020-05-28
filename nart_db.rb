@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'cgi'
+
 module NartDb
   def self.from_table
     LOGGER.debug('Retrieving NART database instance')
@@ -8,8 +10,8 @@ module NartDb
     LOGGER.debug('Loading NART database configuration')
     config = CONFIG['emr']
     engine = config['engine'] || 'mysql2'
-    username = config['username']
-    password = config['password']
+    username = CGI.escape(config['username'])
+    password = CGI.escape(config['password'])
     host = config['host'] || 'localhost'
     port = config['port'] || 3306
     database = config['database']

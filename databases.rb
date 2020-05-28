@@ -3,6 +3,7 @@
 require_relative './config'
 require_relative './logging'
 
+require 'cgi'
 require 'sequel'
 
 def nart_db
@@ -14,8 +15,8 @@ def nart_db
 
     LOGGER.debug('Loading NART database configuration')
     engine = db_config['engine'] || 'mysql2'
-    username = db_config['username']
-    password = db_config['password']
+    username = CGI.escape(db_config['username'])
+    password = CGI.escape(db_config['password'])
     host = db_config['host'] || 'localhost'
     port = db_config['port'] || 3306
     database = db_config['database']
@@ -34,8 +35,8 @@ def emastercard_db
     db_config = config['emastercard']
 
     engine = db_config['engine'] || 'mysql2'
-    username = db_config['username']
-    password = db_config['password']
+    username = CGI.escape(db_config['username'])
+    password = CGI.escape(db_config['password'])
     host = db_config['host'] || 'localhost'
     port = db_config['port'] || 3306
     database = db_config['database']
