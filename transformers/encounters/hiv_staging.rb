@@ -246,12 +246,12 @@ module Transformers
             disease = disease['value']
             disease_concept_id = WHO_STAGES_CRITERIA_MAP[disease] || Nart::Concepts::OTHER
 
-            if disease_concept_id == Nart::Concepts::ASYMPTOMATIC && !@reason_for_art_found
+            if disease_concept_id == Nart::Concepts::ASYMPTOMATIC_HIV_INFECTION && !@reason_for_art_found
               @reason_for_art_found = true
               observations << {
                 concept_id: Nart::Concepts::REASON_FOR_ART_ELIGIBILITY,
                 obs_datetime: retro_date(registration_encounter[:encounter_datetime]),
-                value_coded: disease_concept_id
+                value_coded: find_patient_reason_for_starting(patient[:birthdate], registration_encounter[:encounter_datetime])
               }
             end
 
@@ -357,6 +357,24 @@ module Transformers
 
         def reason_for_starting_set?(obs)
           obs[:concept_id] == Nart::Concepts::REASON_FOR_ART_ELIGIBILITY
+        end
+
+        DAYS_IN_MONTH = 31
+        MONTHS_IN_YEAR = 12
+        UNDER_FIVE_YEARS_MONTHS = MONTHS_IN_YEAR * 5
+
+        def find_patient_reason_for_starting(birthdate, date_enrolled)
+          return Nart::Concepts::ASYMPTOMATIC unless birthdate
+
+          age_in_months = (retro_date(date_enrolled) - retro_date(birthdate)).to_i / DAYS_IN_MONTH
+
+          if age_in_months <= MONTHS_IN_YEAR # Months
+            Nart::Concepts::DNA_PCR
+          elsif age_in_months < UNDER_FIVE_YEARS_MONTHS
+            Nart::Concepts::HIV_INFECTED
+          else
+            Nart::Concepts::ASYMPTOMATIC
+          end
         end
       end
     end
