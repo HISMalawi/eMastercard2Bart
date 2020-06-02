@@ -2,10 +2,12 @@
 # frozen_string_literal: true
 module Transformers
   module PatientProgram
-    def self.transform(patient, visits)
+    def self.transform(patient, visits, encounters)
       outcomes = find_patient_outcomes(patient[:patient_id])
       states = transform_outcomes_to_nart_states(patient, outcomes)
-      date_enrolled = visits.first&.[](:encounter_datetime) || states.first&.[](:start_date)
+      date_enrolled = patient_registration_date(encounters) || visits.first&.[](:encounter_datetime) || states.first&.[](:start_date)
+
+      return nil unless date_enrolled
 
       {
         program_id: Nart::Programs::HIV_PROGRAM,
@@ -97,6 +99,14 @@ module Transformers
                    .exclude(value_text: nil, value_numeric: nil)
                    .order(:encounter_datetime)
                    .map(%i[encounter_datetime value_text])
+    end
+
+    def self.patient_registration_date(encounters)
+      encounters.each do |encounter|
+        next unless encounter[:encounter_type_id] == Nart::Encounters::HIV_CLINIC_REGISTRATION
+
+        return encounter[:encounter_datetime]
+      end
     end
   end
 end

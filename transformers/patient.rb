@@ -17,10 +17,12 @@ module Transformers
 
       LOGGER.debug("Transforming eMastercard patient ##{emastercard_patient['patient_id']}...")
       person = Person.transform(emastercard_patient)
+      encounters = Encounters.transform(emastercard_patient, visits, person)
+
       {
         person: person,
-        encounters: Encounters.transform(emastercard_patient, visits, person),
-        programs: [PatientProgram.transform(emastercard_patient, visits)],
+        encounters: encounters,
+        programs: [PatientProgram.transform(emastercard_patient, visits, encounters)].compact,
         identifiers: PatientIdentifiers.transform(emastercard_patient)
       }
     end
