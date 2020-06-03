@@ -26,7 +26,11 @@ module Transformers
               concept_id: Nart::Concepts::AMOUNT_DISPENSED,
               obs_datetime: retro_date(visit[:encounter_datetime]),
               value_drug: drug_id,
-              value_numeric: amount_dispensed
+              value_numeric: amount_dispensed,
+              drug_order: {
+                drug_id: drug_id,
+                start_date: order[:start_date]
+              }
             }
           end
 
