@@ -78,7 +78,7 @@ module Loaders
                         .first(start_date: day_start..day_end,
                                Sequel[:encounter][:encounter_type] => Nart::Encounters::TREATMENT,
                                Sequel[:drug_order][:drug_inventory_id] => order[:drug_id],
-                               patient_id: observation[:person_id])
+                               Sequel[:encounter][:patient_id] => observation[:person_id])
 
           observation[:order_id] = order&.[](:order_id)
         end
